@@ -1,0 +1,36 @@
+[project]
+name = "ia-rag-assistant"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "ShayanKhan0", email = "shahim.malik5@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=1.4.0",
+    "asyncpg>=0.31.0",
+    "fastapi>=0.141.1",
+    "httpx>=0.28.1",
+    "langfuse>=4.15.1",
+    "pgvector>=0.5.0",
+    "pydantic>=2.13.5",
+    "pydantic-settings>=2.15.0",
+    "sse-starlette>=3.4.11",
+    "structlog>=26.1.0",
+    "tiktoken>=0.14.0",
+    "uvicorn>=0.52.4",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-postgresql>=9.1.0",
+    "ruff>=0.16.6",
+    "testcontainers>=4.15.0",
+]
