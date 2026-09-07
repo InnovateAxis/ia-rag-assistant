@@ -1,0 +1,42 @@
+name: isolation
+on:
+  push: { branches: [main] }
+  schedule: [{ cron: '0 5 * * *' }]      # daily, independent of any push
+permissions:
+  contents: read
+jobs:
+  isolation:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-retries 10
+        ports: ['5432:5432']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --dev
+      # Stand-in for Pod P's `documents` table (carry-forward F16, group-05a-preflight
+      # section "AUTHORISED DEVIATION"). 0001_chunks.sql declares
+      # `references documents(id)`, but `documents` is owned by Pod P in a different
+      # repository and carry-forward C7 forbids a `documents` migration in this repo.
+      # This CI container stands in for the shared database that would already hold
+      # Pod P's table; this step simulates that environment, it does not claim
+      # ownership of the table. Minimal shape only - enough for the FK to resolve,
+      # nothing more. Nothing here enters migrations/.
+      - name: Create Pod P's documents table (stand-in, not owned by this repo)
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -c \
+            "create table if not exists documents (id uuid primary key default gen_random_uuid());"
+      - run: uv run python -m src.db.migrate
+      - name: Create the non-superuser service role
+        run: uv run python -m src.db.bootstrap_roles
+      - name: Isolation suite
+        run: uv run pytest -m isolation -v --strict-markers
+      - name: Fail if the suite collected nothing
+        run: |
+          COUNT=$(uv run pytest -m isolation --collect-only -q | tail -1 | grep -oE '^[0-9]+')
+          test "$COUNT" -ge 5 || (echo "::error::isolation suite shrank to $COUNT"; exit 1)
