@@ -187,6 +187,8 @@ def generate_sop(tenant_slug, tenant_config, doc_num):
 
     if "Detention" in sop_name:
         # The deliberate overlap - all three tenants have this with different free windows
+        free_hours = tenant_config['detention_free_hours']
+        tier2_ceiling = free_hours + 24  # Dynamic second tier: free_hours to free_hours+24
         return f"""STANDARD OPERATING PROCEDURE: {sop_name}
 
 SOP ID: SOP-{tenant_slug.upper()}-{doc_num:03d}
@@ -196,13 +198,13 @@ Tenant: {tenant_config['display_name']}
 
 DETENTION TIME WINDOWS
 
-Free Time: {tenant_config['detention_free_hours']} hours
+Free Time: {free_hours} hours
 This free time begins when the driver arrives at the facility.
 
 Detention Rates (after free time):
-- Hours 0-{tenant_config['detention_free_hours']}: No charge
-- Hours {tenant_config['detention_free_hours']}-48: $50 per 8-hour period
-- Hours 48+: $100 per 8-hour period
+- Hours 0-{free_hours}: No charge
+- Hours {free_hours}-{tier2_ceiling}: $50 per 8-hour period
+- Hours {tier2_ceiling}+: $100 per 8-hour period
 
 PROCEDURES
 1. Driver initiates detention clock upon arrival

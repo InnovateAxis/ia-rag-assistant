@@ -12,8 +12,8 @@ This free time begins when the driver arrives at the facility.
 
 Detention Rates (after free time):
 - Hours 0-36: No charge
-- Hours 36-48: $50 per 8-hour period
-- Hours 48+: $100 per 8-hour period
+- Hours 36-60: $50 per 8-hour period
+- Hours 60+: $100 per 8-hour period
 
 PROCEDURES
 1. Driver initiates detention clock upon arrival
