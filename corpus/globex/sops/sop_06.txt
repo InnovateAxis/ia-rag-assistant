@@ -1,0 +1,25 @@
+STANDARD OPERATING PROCEDURE: Detention Procedures
+
+SOP ID: SOP-GLOBEX-006
+Revision: 2
+Last Updated: 2024-08-15
+Tenant: Globex Logistics
+
+DETENTION TIME WINDOWS
+
+Free Time: 48 hours
+This free time begins when the driver arrives at the facility.
+
+Detention Rates (after free time):
+- Hours 0-48: No charge
+- Hours 48-48: $50 per 8-hour period
+- Hours 48+: $100 per 8-hour period
+
+PROCEDURES
+1. Driver initiates detention clock upon arrival
+2. Warehouse confirms in system
+3. Detention charges accrue automatically after free window
+4. Weekly billing to customer account
+
+COMMUNICATION
+Customer must be notified if detention will exceed 24 hours.

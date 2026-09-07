@@ -1,0 +1,31 @@
+DELIVERY REPORT
+
+Shipment ID: SHP-GLOBEX-20240820-0005
+Tenant: Globex Logistics
+Delivery Date: 2024-08-20
+
+ORIGIN
+Location: Globex Logistics Distribution Center
+Address: Regional Hub, USA
+
+DESTINATION
+Recipient: Customer 5
+Address: Various
+
+FREIGHT DETAILS
+Weight: 550 lbs
+Pieces: 1
+Classification: General Freight
+
+CARRIER: UPS Freight
+Driver: FG 105
+
+DELIVERY NOTES
+Delivered as scheduled.
+Exception: None
+
+CHARGES
+Base Freight: $850
+Fuel Surcharge (see policy): $154.70
+Accessorials: $0
+Total: $1004.70

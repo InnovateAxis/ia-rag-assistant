@@ -1,0 +1,31 @@
+DELIVERY REPORT
+
+Shipment ID: SHP-ACME-20240816-0001
+Tenant: Acme Freight
+Delivery Date: 2024-08-16
+
+ORIGIN
+Location: Acme Freight Distribution Center
+Address: Regional Hub, USA
+
+DESTINATION
+Recipient: Customer 1
+Address: Various
+
+FREIGHT DETAILS
+Weight: 350 lbs
+Pieces: 2
+Classification: General Freight
+
+CARRIER: UPS Freight
+Driver: BC 101
+
+DELIVERY NOTES
+Delivered as scheduled.
+Exception: Delayed 2 hours due to traffic
+
+CHARGES
+Base Freight: $810
+Fuel Surcharge (see policy): $125.55
+Accessorials: $0
+Total: $935.55

@@ -1,0 +1,31 @@
+DELIVERY REPORT
+
+Shipment ID: SHP-MERIDIAN-20240819-0004
+Tenant: Meridian Transport
+Delivery Date: 2024-08-19
+
+ORIGIN
+Location: Meridian Transport Distribution Center
+Address: Regional Hub, USA
+
+DESTINATION
+Recipient: Customer 4
+Address: Various
+
+FREIGHT DETAILS
+Weight: 500 lbs
+Pieces: 5
+Classification: General Freight
+
+CARRIER: FedEx Logistics
+Driver: EF 104
+
+DELIVERY NOTES
+Delivered as scheduled.
+Exception: Vehicle breakdown - covered by insurance
+
+CHARGES
+Base Freight: $840
+Fuel Surcharge (see policy): $141.12
+Accessorials: $0
+Total: $981.12

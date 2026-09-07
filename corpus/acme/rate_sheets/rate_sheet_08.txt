@@ -1,0 +1,21 @@
+Heavy Specialized Equipment
+
+Rate Sheet: RS-ACME-008
+Published: 2024-09-01
+Tenant: Acme Freight
+
+Heavy Specialized Equipment RATES
+
+Zone A (0-100 miles):
+  LTL: $0.85/lb minimum $85
+  Full: $1200 per load
+
+Zone B (100-300 miles):
+  LTL: $0.95/lb minimum $120
+  Full: $1600 per load
+
+Zone C (300+ miles):
+  LTL: $1.10/lb minimum $180
+  Full: $2200 per load
+
+Accessorial charges apply for hazmat, oversize, and time-definite services.

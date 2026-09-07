@@ -1,0 +1,31 @@
+DELIVERY REPORT
+
+Shipment ID: SHP-ACME-20240821-0006
+Tenant: Acme Freight
+Delivery Date: 2024-08-21
+
+ORIGIN
+Location: Acme Freight Distribution Center
+Address: Regional Hub, USA
+
+DESTINATION
+Recipient: Customer 6
+Address: Various
+
+FREIGHT DETAILS
+Weight: 600 lbs
+Pieces: 2
+Classification: General Freight
+
+CARRIER: Kestrel Haulage
+Driver: GH 106
+
+DELIVERY NOTES
+Delivered as scheduled.
+Exception: Delayed 2 hours due to traffic
+
+CHARGES
+Base Freight: $860
+Fuel Surcharge (see policy): $133.30
+Accessorials: $0
+Total: $993.30

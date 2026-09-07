@@ -1,0 +1,31 @@
+DELIVERY REPORT
+
+Shipment ID: SHP-ACME-20240826-0011
+Tenant: Acme Freight
+Delivery Date: 2024-08-26
+
+ORIGIN
+Location: Acme Freight Distribution Center
+Address: Regional Hub, USA
+
+DESTINATION
+Recipient: Customer 11
+Address: Various
+
+FREIGHT DETAILS
+Weight: 850 lbs
+Pieces: 2
+Classification: General Freight
+
+CARRIER: Roadway Express
+Driver: LM 111
+
+DELIVERY NOTES
+Delivered as scheduled.
+Exception: Delayed 2 hours due to traffic
+
+CHARGES
+Base Freight: $910
+Fuel Surcharge (see policy): $141.05
+Accessorials: $0
+Total: $1051.05

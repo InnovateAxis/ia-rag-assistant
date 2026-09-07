@@ -1,0 +1,31 @@
+DELIVERY REPORT
+
+Shipment ID: SHP-MERIDIAN-20240821-0006
+Tenant: Meridian Transport
+Delivery Date: 2024-08-21
+
+ORIGIN
+Location: Meridian Transport Distribution Center
+Address: Regional Hub, USA
+
+DESTINATION
+Recipient: Customer 6
+Address: Various
+
+FREIGHT DETAILS
+Weight: 600 lbs
+Pieces: 2
+Classification: General Freight
+
+CARRIER: Kestrel Haulage
+Driver: GH 106
+
+DELIVERY NOTES
+Delivered as scheduled.
+Exception: Delayed 2 hours due to traffic
+
+CHARGES
+Base Freight: $860
+Fuel Surcharge (see policy): $144.48
+Accessorials: $0
+Total: $1004.48

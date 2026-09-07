@@ -1,0 +1,31 @@
+DELIVERY REPORT
+
+Shipment ID: SHP-MERIDIAN-20240816-0001
+Tenant: Meridian Transport
+Delivery Date: 2024-08-16
+
+ORIGIN
+Location: Meridian Transport Distribution Center
+Address: Regional Hub, USA
+
+DESTINATION
+Recipient: Customer 1
+Address: Various
+
+FREIGHT DETAILS
+Weight: 350 lbs
+Pieces: 2
+Classification: General Freight
+
+CARRIER: UPS Freight
+Driver: BC 101
+
+DELIVERY NOTES
+Delivered as scheduled.
+Exception: Delayed 2 hours due to traffic
+
+CHARGES
+Base Freight: $810
+Fuel Surcharge (see policy): $136.08
+Accessorials: $0
+Total: $946.08

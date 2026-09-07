@@ -1,0 +1,31 @@
+DELIVERY REPORT
+
+Shipment ID: SHP-MERIDIAN-20240822-0007
+Tenant: Meridian Transport
+Delivery Date: 2024-08-22
+
+ORIGIN
+Location: Meridian Transport Distribution Center
+Address: Regional Hub, USA
+
+DESTINATION
+Recipient: Customer 7
+Address: Various
+
+FREIGHT DETAILS
+Weight: 650 lbs
+Pieces: 3
+Classification: General Freight
+
+CARRIER: Roadway Express
+Driver: HI 107
+
+DELIVERY NOTES
+Delivered as scheduled.
+Exception: Signature refused - rescheduled
+
+CHARGES
+Base Freight: $870
+Fuel Surcharge (see policy): $146.16
+Accessorials: $0
+Total: $1016.16

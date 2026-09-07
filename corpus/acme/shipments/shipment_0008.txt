@@ -1,0 +1,31 @@
+DELIVERY REPORT
+
+Shipment ID: SHP-ACME-20240823-0008
+Tenant: Acme Freight
+Delivery Date: 2024-08-23
+
+ORIGIN
+Location: Acme Freight Distribution Center
+Address: Regional Hub, USA
+
+DESTINATION
+Recipient: Customer 8
+Address: Various
+
+FREIGHT DETAILS
+Weight: 700 lbs
+Pieces: 4
+Classification: General Freight
+
+CARRIER: FedEx Logistics
+Driver: IJ 108
+
+DELIVERY NOTES
+Delivered as scheduled.
+Exception: Weather delay
+
+CHARGES
+Base Freight: $880
+Fuel Surcharge (see policy): $136.40
+Accessorials: $0
+Total: $1016.40

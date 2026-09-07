@@ -1,0 +1,31 @@
+DELIVERY REPORT
+
+Shipment ID: SHP-GLOBEX-20240818-0003
+Tenant: Globex Logistics
+Delivery Date: 2024-08-18
+
+ORIGIN
+Location: Globex Logistics Distribution Center
+Address: Regional Hub, USA
+
+DESTINATION
+Recipient: Customer 3
+Address: Various
+
+FREIGHT DETAILS
+Weight: 450 lbs
+Pieces: 4
+Classification: General Freight
+
+CARRIER: Roadway Express
+Driver: DE 103
+
+DELIVERY NOTES
+Delivered as scheduled.
+Exception: Weather delay
+
+CHARGES
+Base Freight: $830
+Fuel Surcharge (see policy): $151.06
+Accessorials: $0
+Total: $981.06

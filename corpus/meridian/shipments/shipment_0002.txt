@@ -1,0 +1,31 @@
+DELIVERY REPORT
+
+Shipment ID: SHP-MERIDIAN-20240817-0002
+Tenant: Meridian Transport
+Delivery Date: 2024-08-17
+
+ORIGIN
+Location: Meridian Transport Distribution Center
+Address: Regional Hub, USA
+
+DESTINATION
+Recipient: Customer 2
+Address: Various
+
+FREIGHT DETAILS
+Weight: 400 lbs
+Pieces: 3
+Classification: General Freight
+
+CARRIER: Kestrel Haulage
+Driver: CD 102
+
+DELIVERY NOTES
+Delivered as scheduled.
+Exception: Signature refused - rescheduled
+
+CHARGES
+Base Freight: $820
+Fuel Surcharge (see policy): $137.76
+Accessorials: $0
+Total: $957.76

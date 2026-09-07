@@ -1,0 +1,19 @@
+FUEL SURCHARGE POLICY
+
+Effective: 2024-01-01
+Tenant: Meridian Transport
+
+BASE FUEL SURCHARGE: 16.8%
+
+This surcharge applies to all line-haul charges and is adjusted monthly based on
+the national average diesel index.
+
+CALCULATION
+Base freight charge × 16.8% = Fuel surcharge
+
+ADJUSTMENT
+The surcharge percentage changes on the first of each month based on prevailing
+market conditions as reported by the DOT Energy Information Administration.
+
+CUSTOMER NOTIFICATION
+Customers receive 24 hours notice of surcharge changes.

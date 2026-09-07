@@ -1,0 +1,31 @@
+DELIVERY REPORT
+
+Shipment ID: SHP-GLOBEX-20240816-0001
+Tenant: Globex Logistics
+Delivery Date: 2024-08-16
+
+ORIGIN
+Location: Globex Logistics Distribution Center
+Address: Regional Hub, USA
+
+DESTINATION
+Recipient: Customer 1
+Address: Various
+
+FREIGHT DETAILS
+Weight: 350 lbs
+Pieces: 2
+Classification: General Freight
+
+CARRIER: UPS Freight
+Driver: BC 101
+
+DELIVERY NOTES
+Delivered as scheduled.
+Exception: Delayed 2 hours due to traffic
+
+CHARGES
+Base Freight: $810
+Fuel Surcharge (see policy): $147.42
+Accessorials: $0
+Total: $957.42

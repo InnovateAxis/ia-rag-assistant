@@ -1,0 +1,31 @@
+DELIVERY REPORT
+
+Shipment ID: SHP-GLOBEX-20240819-0004
+Tenant: Globex Logistics
+Delivery Date: 2024-08-19
+
+ORIGIN
+Location: Globex Logistics Distribution Center
+Address: Regional Hub, USA
+
+DESTINATION
+Recipient: Customer 4
+Address: Various
+
+FREIGHT DETAILS
+Weight: 500 lbs
+Pieces: 5
+Classification: General Freight
+
+CARRIER: FedEx Logistics
+Driver: EF 104
+
+DELIVERY NOTES
+Delivered as scheduled.
+Exception: Vehicle breakdown - covered by insurance
+
+CHARGES
+Base Freight: $840
+Fuel Surcharge (see policy): $152.88
+Accessorials: $0
+Total: $992.88

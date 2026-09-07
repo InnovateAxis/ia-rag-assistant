@@ -1,0 +1,31 @@
+DELIVERY REPORT
+
+Shipment ID: SHP-GLOBEX-20240827-0012
+Tenant: Globex Logistics
+Delivery Date: 2024-08-27
+
+ORIGIN
+Location: Globex Logistics Distribution Center
+Address: Regional Hub, USA
+
+DESTINATION
+Recipient: Customer 12
+Address: Various
+
+FREIGHT DETAILS
+Weight: 900 lbs
+Pieces: 3
+Classification: General Freight
+
+CARRIER: FedEx Logistics
+Driver: MN 112
+
+DELIVERY NOTES
+Delivered as scheduled.
+Exception: Signature refused - rescheduled
+
+CHARGES
+Base Freight: $920
+Fuel Surcharge (see policy): $167.44
+Accessorials: $0
+Total: $1087.44

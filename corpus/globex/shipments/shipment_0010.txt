@@ -1,0 +1,31 @@
+DELIVERY REPORT
+
+Shipment ID: SHP-GLOBEX-20240825-0010
+Tenant: Globex Logistics
+Delivery Date: 2024-08-25
+
+ORIGIN
+Location: Globex Logistics Distribution Center
+Address: Regional Hub, USA
+
+DESTINATION
+Recipient: Customer 10
+Address: Various
+
+FREIGHT DETAILS
+Weight: 800 lbs
+Pieces: 1
+Classification: General Freight
+
+CARRIER: Kestrel Haulage
+Driver: KL 110
+
+DELIVERY NOTES
+Delivered as scheduled.
+Exception: None
+
+CHARGES
+Base Freight: $900
+Fuel Surcharge (see policy): $163.80
+Accessorials: $0
+Total: $1063.80

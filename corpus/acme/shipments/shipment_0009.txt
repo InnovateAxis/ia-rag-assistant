@@ -1,0 +1,31 @@
+DELIVERY REPORT
+
+Shipment ID: SHP-ACME-20240824-0009
+Tenant: Acme Freight
+Delivery Date: 2024-08-24
+
+ORIGIN
+Location: Acme Freight Distribution Center
+Address: Regional Hub, USA
+
+DESTINATION
+Recipient: Customer 9
+Address: Various
+
+FREIGHT DETAILS
+Weight: 750 lbs
+Pieces: 5
+Classification: General Freight
+
+CARRIER: UPS Freight
+Driver: JK 109
+
+DELIVERY NOTES
+Delivered as scheduled.
+Exception: Vehicle breakdown - covered by insurance
+
+CHARGES
+Base Freight: $890
+Fuel Surcharge (see policy): $137.95
+Accessorials: $0
+Total: $1027.95
