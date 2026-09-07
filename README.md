@@ -1,5 +1,14 @@
 ﻿# InnovateAxis P7 — Tenant-Isolated RAG Assistant
 
+## Architecture decisions
+
+The decisions a client's security team will want to read, in order.
+
+| ADR | Decision |
+|---|---|
+| [ADR-0001](docs/adr/0001-pgvector-under-rls.md) | Embeddings live in PostgreSQL under the same row-level security policies as the source documents, not in a dedicated vector database. The database enforces tenant isolation, not application code. |
+| [ADR-0002](docs/adr/0002-hybrid-retrieval-justification.md) | Hybrid retrieval (full-text + vector), justified by a measured keyword baseline against this project's own corpus and golden set. |
+
 ## Layout
 
 | Path | Purpose |
