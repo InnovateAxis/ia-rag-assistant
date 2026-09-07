@@ -17,9 +17,19 @@ create policy chunks_tenant_isolation on document_chunks
   using      (tenant_id = current_setting('request.jwt.claims', true)::json->>'tenant_id')
   with check (tenant_id = current_setting('request.jwt.claims', true)::json->>'tenant_id');
 
--- Fails closed by construction. With no claim set, current_setting(..., true)
--- returns NULL, the comparison is NULL rather than true, and the row is not
--- returned. A dropped claim yields zero rows, never another tenant's rows.
+-- Fails closed by construction, by one of two paths. If the claim was never
+-- set, current_setting(..., true) returns NULL, the comparison is NULL rather
+-- than true, and no row is returned. If the claim was set but is not valid
+-- JSON -- which includes the empty string, and note that set_config(..., NULL)
+-- stores an empty string rather than a SQL NULL -- the ::json cast raises
+-- instead. A claim that is valid JSON but carries no usable tenant_id (key
+-- absent, null, or empty) returns no rows by the first path.
+--
+-- So a dropped claim either returns zero rows or errors, depending on how it
+-- was dropped. It never returns another tenant's rows. Callers and tests must
+-- expect both outcomes: clear the claim by leaving it unset or by RESET, not
+-- by assigning '' or NULL, or a test asserting "no rows" will see an
+-- exception instead.
 --
 -- USING governs which rows are visible to select/update/delete; WITH CHECK
 -- governs the rows insert/update may write. Both are required: without
