@@ -67,13 +67,19 @@ TENANT_PREDICATE = (
     "::json ->> 'tenant_id'::text))"
 )
 
-# The exact policy set `0002_chunks_rls.sql` is allowed to produce, as
-# (policyname, permissive, cmd, qual, with_check). Changing this constant is a
-# deliberate change to the isolation guarantee and should be reviewed as one.
+# The exact policy set `0002_chunks_rls.sql` is allowed to produce, in
+# pg_policies' own column order: (policyname, permissive, roles, cmd, qual,
+# with_check). Changing this constant is a deliberate change to the isolation
+# guarantee and should be reviewed as one.
+#
+# roles is ("public",) because 0002 declares the policy with no TO clause, which
+# Postgres defaults to PUBLIC. pg_policies.roles is name[], and asyncpg hands it
+# back as a list, which cannot live in a set of tuples — hence tuple() below.
 EXPECTED_CHUNK_POLICIES = {
     (
         "chunks_tenant_isolation",
         "PERMISSIVE",
+        ("public",),
         "ALL",
         TENANT_PREDICATE,
         TENANT_PREDICATE,
@@ -83,9 +89,9 @@ EXPECTED_CHUNK_POLICIES = {
 
 @pytest.mark.isolation
 async def test_policy_set_on_document_chunks_is_exactly_as_declared(db):
-    """Pin the policy set and the rule of every policy in it.
+    """Pin the policy set, and the rule and reach of every policy in it.
 
-    Three ways to open this table leave every other test in this file green,
+    Four ways to break this table leave every other test in this file green,
     and this test is the only thing that catches any of them.
 
     ADDED: Postgres ORs permissive policies, so `create policy debug_readall
@@ -102,15 +108,33 @@ async def test_policy_set_on_document_chunks_is_exactly_as_declared(db):
     those three reports success — while any session that sets `app.support_mode`
     reads every tenant's rows. Verified as a live leak, not a hypothetical.
 
+    ROLES: `alter policy chunks_tenant_isolation on document_chunks to
+    <unused role>` keeps the name, permissiveness, command and both rules
+    intact, so pinning those alone still reports success. No policy then
+    applies to the service role, RLS denies every read, and the service can
+    see nothing at all — while every other assertion here is trivially
+    satisfied, because a table nobody can read leaks nothing. This one fails
+    closed rather than open, which is why it is pinned here but is not the
+    whole answer: only a positive control proves a tenant can still reach its
+    own rows.
+
     The comparison is `==` rather than `>=` deliberately: a superset check
-    catches none of the three.
+    catches none of the four.
     """
     async with db.session(tenant="ten_acme") as s:
         rows = await s.fetch(
-            "select policyname, permissive, cmd, qual, with_check from pg_policies "
+            "select policyname, permissive, roles, cmd, qual, with_check "
+            "from pg_policies "
             "where schemaname = 'public' and tablename = 'document_chunks'")
     actual = {
-        (r["policyname"], r["permissive"], r["cmd"], r["qual"], r["with_check"])
+        (
+            r["policyname"],
+            r["permissive"],
+            tuple(r["roles"]),
+            r["cmd"],
+            r["qual"],
+            r["with_check"],
+        )
         for r in rows
     }
     assert actual == EXPECTED_CHUNK_POLICIES, (
