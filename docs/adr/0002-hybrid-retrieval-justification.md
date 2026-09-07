@@ -61,33 +61,79 @@ informative signal here is rank quality (hit@1, MRR), not recall.
 
 ### Where keyword already wins
 
-Every one of the 44 questions that landed at rank 1 did so on the strength
-of an exact, rare-within-tenant term: a SOP or rate-sheet **id**
-(`SOP-ACME-001`, `RS-GLOBEX-002`), a **percentage** stated to one decimal
-(`15.5%`, `18.2%`, `16.8%` — 1.1's fuel-surcharge overlap, deliberately
-different per tenant), a **dollar figure** (`$2850`, `$50 per 8-hour
-period`), or a **shipment id** (`SHP-ACME-20240817-0002`). These are exactly
-the categories the runbook names as keyword's strength — exact identifiers,
-rare domain terms, numbers quoted verbatim — and the measurement confirms
-it rather than assuming it.
+**Corrected after ia-verifier caught the first version of this section
+overstating its own mechanism** (`ts_rank` scores a document against the
+*query's* stemmed terms — a value that appears only in the answer, never in
+the question, cannot have driven the document's rank; six of the seven
+example terms first written here were exactly that: answer values quoted
+from `expected_answer_contains`, appearing in zero of the 75 questions).
+What actually drove each rank-1 result, checked directly rather than
+asserted:
+
+- **8 of the 44** rank-1 questions contain a literal exact identifier in the
+  question itself — a shipment id (`SHP-ACME-20240817-0002`, `SHP-GLOBEX-
+  20240817-0002`, ...) — and those 8 rank first because that string is
+  unique within the tenant's corpus. This is the runbook's "exact
+  identifiers" case, confirmed, but it is 8 questions, not 44.
+- **The remaining 36** rank first on ordinary domain vocabulary that is rare
+  *within a 30-42 document tenant corpus* even though it is not a formal
+  identifier: "detention", "hazmat", "kestrel haulage", "accessorial",
+  "zone pricing", "claims processing", "temperature control", "customs
+  documentation". Each of these terms is the corpus's own generator-cycle
+  category name, so it appears in the 1-3 documents of that category and
+  nowhere else in the tenant's other 27-39 documents — rare enough to rank
+  decisively without being an identifier in the runbook's narrower sense.
+  This is still "rare domain terms," the runbook's second predicted
+  category — just not the same mechanism as an id or a number.
+- **Zero** rank-1 hits were driven by a percentage, a dollar figure, or a
+  SOP/rate-sheet/MSA id appearing *in the question* — none of those values
+  are ever asked for by name; they are what the answer is expected to
+  contain, which is a different thing from what the retrieval query
+  matched on. Precision matters here because this ADR's Consequences bind
+  future RRF-weight decisions (3.2/3.3) to this section, not to a
+  restated intuition.
 
 ### Where keyword struggles — and why hybrid alone will not fix it
 
 The 4 questions that missed rank 1 (q008, q017, q027, q039 — one per tenant
 plus a multi-hop question inheriting the same document) all point at the
-same thing: **the five MSA amendment documents in each tenant's contracts
-folder are byte-identical in body** (`OVERVIEW` / `SERVICE LEVELS` /
-`LIABILITY` / `DISPUTE RESOLUTION`, generated from one template), differing
-only by a `Document ID` field the natural-language question never names.
-Keyword search still finds the right one (rank 2-4, always inside the
-top 5) because a stray term ties it near the top, but it has no way to rank
-it first among true near-duplicates — and **neither will an embedding
-model**, because the documents are also semantically identical where it
-matters. This is a corpus-modeling question for whoever owns 2.2/2.6 —
-consolidate near-duplicate boilerplate at ingest, or surface the most recent
-amendment by effective date, or accept that "which amendment" is not a
-retrieval problem at all — not a gap hybrid retrieval in Phase 3 closes by
-itself.
+same thing: each tenant's contracts folder holds several MSA amendment
+documents generated from one template (`OVERVIEW` / `SERVICE LEVELS` /
+`LIABILITY` / `DISPUTE RESOLUTION`, byte-identical across all of them) —
+**Acme has 5, Globex has 4, Meridian has 3**, not five in every tenant as
+an earlier version of this ADR and of `runbook/CARRYFORWARD.md` F24 both
+said, caught by ia-verifier against the actual committed tree.
+
+**The real mechanism is the title line, not an absence of any distinguishing
+signal.** Each MSA amendment is titled either `Amendment` or `Master Service
+Agreement` — for Acme, `01` and `07` are `Amendment`; `02`, `06` and `08` are
+`Master Service Agreement`. Every one of the 4 missed questions asks about
+"our master service agreement" — a phrase that matches the *title* of the
+majority of amendments verbatim, while the document `evals/golden.jsonl`
+happens to pin as the expected chunk (`msa_amendment_01`) is titled
+`Amendment`. Keyword search is not failing to distinguish indistinguishable
+documents here; it is correctly ranking the documents whose title the
+question actually used ahead of the one the golden set arbitrarily pinned.
+The four `LIABILITY`/`SERVICE LEVELS` body sections are genuinely identical
+and carry no distinguishing content — that part of the original diagnosis
+holds — but the title does distinguish these documents, just not toward the
+pinned one. In every one of the 4 cases the top-ranked (wrong) document
+contains the same expected answer phrase verbatim (`4 business hours`,
+`24/7 hotline`, `Meridian Transport's operational guidelines`) — the answer
+was available at rank 1 in all 4 cases, just attached to a different
+Document ID than the one pinned. hit@1 = 91.7% therefore understates how
+often a right answer was actually available at the top of the ranking.
+
+This is still a corpus-modeling question for whoever owns 2.2/2.6, but the
+shape of the fix is narrower than "consolidate indistinguishable documents":
+either the golden set should accept any same-titled amendment as a correct
+citation for a title-matching question (a golden-set fix, not a retrieval
+fix), or ingest should tag amendments by effective date/version so "our
+master service agreement" resolves to a specific current one rather than
+whichever amendment's title happens to match best. Neither is a gap hybrid
+retrieval in Phase 3 closes by itself, since an embedding model asked "what
+does our master service agreement say" has the same title-driven ambiguity
+to resolve.
 
 ### The stronger argument for hybrid: what keyword cannot do by construction
 
