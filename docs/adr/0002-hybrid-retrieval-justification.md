@@ -75,7 +75,24 @@ asserted:
   20240817-0002`, ...) — and those 8 rank first because that string is
   unique within the tenant's corpus. This is the runbook's "exact
   identifiers" case, confirmed, but it is 8 questions, not 44.
-- **The remaining 36** rank first on ordinary domain vocabulary that is rare
+- **5 of the 44** rank-1 questions quote a dollar figure lifted verbatim from
+  the record they ask about — an arithmetic-check phrasing ("Shipment
+  SHP-...-0002 was charged a $X fuel surcharge on an $820 base freight
+  charge — does that match our policy?", or "what would the fuel surcharge
+  be on a ... charge of $Y?") that restates a value from the document before
+  asking about it, rather than the runbook's predicted identifier or rare
+  term: q031 quotes `$127.10` and `$820`, both verbatim in the rank-1
+  `corpus/acme/shipments/shipment_0002.txt`; q037 quotes `$149.24` and
+  `$820`, verbatim in `corpus/globex/shipments/shipment_0002.txt`; q043
+  quotes `$137.76` and `$820`, verbatim in
+  `corpus/meridian/shipments/shipment_0002.txt`; q035 quotes `$1600`,
+  verbatim in `corpus/acme/rate_sheets/rate_sheet_02.txt`; q045 quotes
+  `$1200`, verbatim in `corpus/meridian/rate_sheets/rate_sheet_03.txt`. By
+  this section's own `ts_rank` reasoning — a value that appears in the
+  question can drive the rank of the document it also appears in — these 5
+  are figure-driven, not domain-vocabulary-driven, and were mis-sorted into
+  the "remaining" bucket in an earlier version of this section.
+- **The remaining 31** rank first on ordinary domain vocabulary that is rare
   *within a 30-42 document tenant corpus* even though it is not a formal
   identifier: "detention", "hazmat", "kestrel haulage", "accessorial",
   "zone pricing", "claims processing", "temperature control", "customs
@@ -85,13 +102,11 @@ asserted:
   decisively without being an identifier in the runbook's narrower sense.
   This is still "rare domain terms," the runbook's second predicted
   category — just not the same mechanism as an id or a number.
-- **Zero** rank-1 hits were driven by a percentage, a dollar figure, or a
-  SOP/rate-sheet/MSA id appearing *in the question* — none of those values
-  are ever asked for by name; they are what the answer is expected to
-  contain, which is a different thing from what the retrieval query
-  matched on. Precision matters here because this ADR's Consequences bind
-  future RRF-weight decisions (3.2/3.3) to this section, not to a
-  restated intuition.
+- **Percentages and SOP/rate-sheet/MSA ids**, as opposed to dollar figures,
+  are still never asked for by name in any of the 44 — that half of the
+  original claim holds; only the dollar-figure half was wrong. Precision
+  matters here because this ADR's Consequences bind future RRF-weight
+  decisions (3.2/3.3) to this section, not to a restated intuition.
 
 ### Where keyword struggles — and why hybrid alone will not fix it
 
