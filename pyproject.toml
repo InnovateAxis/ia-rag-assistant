@@ -34,3 +34,32 @@ dev = [
     "ruff>=0.16.6",
     "testcontainers>=4.15.0",
 ]
+
+[tool.pytest.ini_options]
+# Registered so that 0.5's CI can run `pytest -m isolation --strict-markers`,
+# which hard-errors on an unregistered marker. Registration also turns a
+# misspelled marker into a collection error instead of a silent zero-test run.
+markers = [
+  "isolation: tenant isolation guarantee tests",
+  "eval: golden-set evaluation tests",
+]
+# The isolation tests are async and carry only @pytest.mark.isolation, so
+# pytest-asyncio has to adopt them without an explicit @pytest.mark.asyncio.
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# `package = false` means there is no installed distribution; the repo root has
+# to be importable for `src.db.migrate` to resolve from a test.
+pythonpath = ["."]
+
+[tool.mypy]
+# `package = false` and the flat src/ layout mean src/ is a namespace package, so
+# mypy would otherwise resolve src/db/migrate.py as both `db.migrate` and
+# `src.db.migrate`. The runbook's own commands are `python -m src.db.migrate`,
+# so the repo root is the package base.
+explicit_package_bases = true
+mypy_path = "."
+
+[[tool.mypy.overrides]]
+# Neither ships a py.typed marker.
+module = ["asyncpg.*", "testcontainers.*"]
+ignore_missing_imports = true
