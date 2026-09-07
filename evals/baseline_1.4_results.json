@@ -1,0 +1,891 @@
+{
+  "top_k": 5,
+  "per_category_hit_at_1": {
+    "answerable_single": 0.9,
+    "answerable_multi": 0.9444444444444444
+  },
+  "per_category_hit_at_5": {
+    "answerable_single": 1.0,
+    "answerable_multi": 1.0
+  },
+  "per_category_mrr": {
+    "answerable_single": 0.9305555555555556,
+    "answerable_multi": 0.9629629629629629
+  },
+  "overall_answerable_hit_at_1": 0.9166666666666666,
+  "overall_answerable_hit_at_5": 1.0,
+  "overall_answerable_mrr": 0.9427083333333334,
+  "details": [
+    {
+      "id": "q001",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/acme/rate_sheets/rate_sheet_01.txt"
+      ],
+      "top_5": [
+        "corpus/acme/rate_sheets/rate_sheet_01.txt",
+        "corpus/acme/rate_sheets/rate_sheet_06.txt",
+        "corpus/acme/rate_sheets/rate_sheet_11.txt",
+        "corpus/acme/shipments/shipment_0001.txt",
+        "corpus/acme/shipments/shipment_0002.txt"
+      ]
+    },
+    {
+      "id": "q002",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/acme/sops/sop_01.txt"
+      ],
+      "top_5": [
+        "corpus/acme/sops/sop_01.txt",
+        "corpus/acme/sops/sop_06.txt",
+        "corpus/acme/rate_sheets/rate_sheet_02.txt",
+        "corpus/acme/rate_sheets/rate_sheet_07.txt",
+        "corpus/acme/rate_sheets/rate_sheet_12.txt"
+      ]
+    },
+    {
+      "id": "q003",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/acme/sops/sop_01.txt"
+      ],
+      "top_5": [
+        "corpus/acme/sops/sop_01.txt",
+        "corpus/acme/sops/sop_06.txt",
+        "corpus/acme/rate_sheets/rate_sheet_04.txt",
+        "corpus/acme/rate_sheets/rate_sheet_09.txt",
+        "corpus/acme/rate_sheets/rate_sheet_02.txt"
+      ]
+    },
+    {
+      "id": "q004",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/acme/contracts/carrier_agreement_kestrel_haulage_03.txt"
+      ],
+      "top_5": [
+        "corpus/acme/contracts/carrier_agreement_kestrel_haulage_03.txt",
+        "corpus/acme/contracts/carrier_agreement_kestrel_haulage_04.txt",
+        "corpus/acme/contracts/carrier_agreement_kestrel_haulage_05.txt",
+        "corpus/acme/rate_sheets/rate_sheet_04.txt",
+        "corpus/acme/rate_sheets/rate_sheet_09.txt"
+      ]
+    },
+    {
+      "id": "q005",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/acme/sops/sop_02.txt"
+      ],
+      "top_5": [
+        "corpus/acme/sops/sop_02.txt",
+        "corpus/acme/sops/sop_07.txt",
+        "corpus/acme/sops/sop_03.txt",
+        "corpus/acme/sops/sop_04.txt",
+        "corpus/acme/sops/sop_05.txt"
+      ]
+    },
+    {
+      "id": "q006",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/acme/sops/sop_04.txt"
+      ],
+      "top_5": [
+        "corpus/acme/sops/sop_04.txt",
+        "corpus/acme/sops/sop_09.txt",
+        "corpus/acme/sops/sop_02.txt",
+        "corpus/acme/sops/sop_03.txt",
+        "corpus/acme/sops/sop_05.txt"
+      ]
+    },
+    {
+      "id": "q007",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/acme/rate_sheets/rate_sheet_02.txt"
+      ],
+      "top_5": [
+        "corpus/acme/rate_sheets/rate_sheet_02.txt",
+        "corpus/acme/rate_sheets/rate_sheet_07.txt",
+        "corpus/acme/rate_sheets/rate_sheet_12.txt",
+        "corpus/acme/rate_sheets/rate_sheet_04.txt",
+        "corpus/acme/rate_sheets/rate_sheet_09.txt"
+      ]
+    },
+    {
+      "id": "q008",
+      "type": "answerable_single",
+      "hit_at_1": false,
+      "hit_at_5": true,
+      "reciprocal_rank": 0.25,
+      "expected": [
+        "corpus/acme/contracts/msa_amendment_01.txt"
+      ],
+      "top_5": [
+        "corpus/acme/contracts/msa_amendment_02.txt",
+        "corpus/acme/contracts/msa_amendment_06.txt",
+        "corpus/acme/contracts/msa_amendment_08.txt",
+        "corpus/acme/contracts/msa_amendment_01.txt",
+        "corpus/acme/contracts/msa_amendment_07.txt"
+      ]
+    },
+    {
+      "id": "q009",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/acme/sops/sop_05.txt"
+      ],
+      "top_5": [
+        "corpus/acme/sops/sop_05.txt",
+        "corpus/acme/sops/sop_02.txt",
+        "corpus/acme/sops/sop_03.txt",
+        "corpus/acme/sops/sop_04.txt",
+        "corpus/acme/sops/sop_07.txt"
+      ]
+    },
+    {
+      "id": "q010",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/acme/shipments/shipment_0002.txt"
+      ],
+      "top_5": [
+        "corpus/acme/shipments/shipment_0002.txt",
+        "corpus/acme/shipments/shipment_0001.txt",
+        "corpus/acme/shipments/shipment_0003.txt",
+        "corpus/acme/shipments/shipment_0004.txt",
+        "corpus/acme/shipments/shipment_0005.txt"
+      ]
+    },
+    {
+      "id": "q011",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/globex/rate_sheets/rate_sheet_01.txt"
+      ],
+      "top_5": [
+        "corpus/globex/rate_sheets/rate_sheet_01.txt",
+        "corpus/globex/rate_sheets/rate_sheet_06.txt",
+        "corpus/globex/rate_sheets/rate_sheet_11.txt",
+        "corpus/globex/shipments/shipment_0001.txt",
+        "corpus/globex/shipments/shipment_0002.txt"
+      ]
+    },
+    {
+      "id": "q012",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/globex/sops/sop_01.txt"
+      ],
+      "top_5": [
+        "corpus/globex/sops/sop_01.txt",
+        "corpus/globex/sops/sop_06.txt",
+        "corpus/globex/rate_sheets/rate_sheet_02.txt",
+        "corpus/globex/rate_sheets/rate_sheet_07.txt",
+        "corpus/globex/rate_sheets/rate_sheet_01.txt"
+      ]
+    },
+    {
+      "id": "q013",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/globex/sops/sop_01.txt"
+      ],
+      "top_5": [
+        "corpus/globex/sops/sop_01.txt",
+        "corpus/globex/sops/sop_06.txt",
+        "corpus/globex/rate_sheets/rate_sheet_04.txt",
+        "corpus/globex/rate_sheets/rate_sheet_09.txt",
+        "corpus/globex/rate_sheets/rate_sheet_02.txt"
+      ]
+    },
+    {
+      "id": "q014",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/globex/contracts/carrier_agreement_kestrel_haulage_03.txt"
+      ],
+      "top_5": [
+        "corpus/globex/contracts/carrier_agreement_kestrel_haulage_03.txt",
+        "corpus/globex/contracts/carrier_agreement_kestrel_haulage_04.txt",
+        "corpus/globex/contracts/carrier_agreement_kestrel_haulage_05.txt",
+        "corpus/globex/rate_sheets/rate_sheet_04.txt",
+        "corpus/globex/rate_sheets/rate_sheet_09.txt"
+      ]
+    },
+    {
+      "id": "q015",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/globex/sops/sop_03.txt"
+      ],
+      "top_5": [
+        "corpus/globex/sops/sop_03.txt",
+        "corpus/globex/sops/sop_08.txt",
+        "corpus/globex/sops/sop_02.txt",
+        "corpus/globex/sops/sop_04.txt",
+        "corpus/globex/sops/sop_05.txt"
+      ]
+    },
+    {
+      "id": "q016",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/globex/rate_sheets/rate_sheet_05.txt"
+      ],
+      "top_5": [
+        "corpus/globex/rate_sheets/rate_sheet_05.txt",
+        "corpus/globex/rate_sheets/rate_sheet_10.txt",
+        "corpus/globex/rate_sheets/rate_sheet_04.txt",
+        "corpus/globex/rate_sheets/rate_sheet_09.txt",
+        "corpus/globex/rate_sheets/rate_sheet_02.txt"
+      ]
+    },
+    {
+      "id": "q017",
+      "type": "answerable_single",
+      "hit_at_1": false,
+      "hit_at_5": true,
+      "reciprocal_rank": 0.333,
+      "expected": [
+        "corpus/globex/contracts/msa_amendment_01.txt"
+      ],
+      "top_5": [
+        "corpus/globex/contracts/msa_amendment_02.txt",
+        "corpus/globex/contracts/msa_amendment_06.txt",
+        "corpus/globex/contracts/msa_amendment_01.txt",
+        "corpus/globex/contracts/msa_amendment_07.txt",
+        "corpus/globex/sops/sop_01.txt"
+      ]
+    },
+    {
+      "id": "q018",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/globex/sops/sop_02.txt"
+      ],
+      "top_5": [
+        "corpus/globex/sops/sop_02.txt",
+        "corpus/globex/sops/sop_07.txt",
+        "corpus/globex/sops/sop_03.txt",
+        "corpus/globex/sops/sop_04.txt",
+        "corpus/globex/sops/sop_05.txt"
+      ]
+    },
+    {
+      "id": "q019",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/globex/rate_sheets/rate_sheet_04.txt"
+      ],
+      "top_5": [
+        "corpus/globex/rate_sheets/rate_sheet_04.txt",
+        "corpus/globex/rate_sheets/rate_sheet_09.txt",
+        "corpus/globex/rate_sheets/rate_sheet_02.txt",
+        "corpus/globex/rate_sheets/rate_sheet_07.txt",
+        "corpus/globex/rate_sheets/rate_sheet_05.txt"
+      ]
+    },
+    {
+      "id": "q020",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/globex/shipments/shipment_0002.txt"
+      ],
+      "top_5": [
+        "corpus/globex/shipments/shipment_0002.txt",
+        "corpus/globex/shipments/shipment_0001.txt",
+        "corpus/globex/shipments/shipment_0003.txt",
+        "corpus/globex/shipments/shipment_0004.txt",
+        "corpus/globex/shipments/shipment_0005.txt"
+      ]
+    },
+    {
+      "id": "q021",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/meridian/rate_sheets/rate_sheet_01.txt"
+      ],
+      "top_5": [
+        "corpus/meridian/rate_sheets/rate_sheet_01.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_06.txt",
+        "corpus/meridian/shipments/shipment_0001.txt",
+        "corpus/meridian/shipments/shipment_0002.txt",
+        "corpus/meridian/shipments/shipment_0003.txt"
+      ]
+    },
+    {
+      "id": "q022",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/meridian/sops/sop_01.txt"
+      ],
+      "top_5": [
+        "corpus/meridian/sops/sop_01.txt",
+        "corpus/meridian/sops/sop_06.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_02.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_07.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_01.txt"
+      ]
+    },
+    {
+      "id": "q023",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/meridian/sops/sop_01.txt"
+      ],
+      "top_5": [
+        "corpus/meridian/sops/sop_01.txt",
+        "corpus/meridian/sops/sop_06.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_04.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_09.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_02.txt"
+      ]
+    },
+    {
+      "id": "q024",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/meridian/sops/sop_01.txt"
+      ],
+      "top_5": [
+        "corpus/meridian/sops/sop_01.txt",
+        "corpus/meridian/sops/sop_06.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_04.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_09.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_02.txt"
+      ]
+    },
+    {
+      "id": "q025",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/meridian/sops/sop_05.txt"
+      ],
+      "top_5": [
+        "corpus/meridian/sops/sop_05.txt",
+        "corpus/meridian/sops/sop_02.txt",
+        "corpus/meridian/sops/sop_03.txt",
+        "corpus/meridian/sops/sop_04.txt",
+        "corpus/meridian/sops/sop_07.txt"
+      ]
+    },
+    {
+      "id": "q026",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/meridian/rate_sheets/rate_sheet_03.txt"
+      ],
+      "top_5": [
+        "corpus/meridian/rate_sheets/rate_sheet_03.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_08.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_04.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_09.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_05.txt"
+      ]
+    },
+    {
+      "id": "q027",
+      "type": "answerable_single",
+      "hit_at_1": false,
+      "hit_at_5": true,
+      "reciprocal_rank": 0.333,
+      "expected": [
+        "corpus/meridian/contracts/msa_amendment_01.txt"
+      ],
+      "top_5": [
+        "corpus/meridian/contracts/msa_amendment_02.txt",
+        "corpus/meridian/contracts/msa_amendment_06.txt",
+        "corpus/meridian/contracts/msa_amendment_01.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_02.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_03.txt"
+      ]
+    },
+    {
+      "id": "q028",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/meridian/sops/sop_04.txt"
+      ],
+      "top_5": [
+        "corpus/meridian/sops/sop_04.txt",
+        "corpus/meridian/sops/sop_02.txt",
+        "corpus/meridian/sops/sop_03.txt",
+        "corpus/meridian/sops/sop_05.txt",
+        "corpus/meridian/sops/sop_07.txt"
+      ]
+    },
+    {
+      "id": "q029",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/meridian/rate_sheets/rate_sheet_02.txt"
+      ],
+      "top_5": [
+        "corpus/meridian/rate_sheets/rate_sheet_02.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_07.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_04.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_09.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_05.txt"
+      ]
+    },
+    {
+      "id": "q030",
+      "type": "answerable_single",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/meridian/shipments/shipment_0002.txt"
+      ],
+      "top_5": [
+        "corpus/meridian/shipments/shipment_0002.txt",
+        "corpus/meridian/shipments/shipment_0001.txt",
+        "corpus/meridian/shipments/shipment_0003.txt",
+        "corpus/meridian/shipments/shipment_0004.txt",
+        "corpus/meridian/shipments/shipment_0005.txt"
+      ]
+    },
+    {
+      "id": "q031",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/acme/rate_sheets/rate_sheet_01.txt",
+        "corpus/acme/shipments/shipment_0002.txt"
+      ],
+      "top_5": [
+        "corpus/acme/shipments/shipment_0002.txt",
+        "corpus/acme/shipments/shipment_0001.txt",
+        "corpus/acme/shipments/shipment_0005.txt",
+        "corpus/acme/shipments/shipment_0009.txt",
+        "corpus/acme/shipments/shipment_0013.txt"
+      ]
+    },
+    {
+      "id": "q032",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/acme/contracts/carrier_agreement_kestrel_haulage_03.txt",
+        "corpus/acme/sops/sop_01.txt"
+      ],
+      "top_5": [
+        "corpus/acme/sops/sop_01.txt",
+        "corpus/acme/sops/sop_06.txt",
+        "corpus/acme/rate_sheets/rate_sheet_02.txt",
+        "corpus/acme/rate_sheets/rate_sheet_07.txt",
+        "corpus/acme/rate_sheets/rate_sheet_12.txt"
+      ]
+    },
+    {
+      "id": "q033",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/acme/contracts/carrier_agreement_kestrel_haulage_03.txt",
+        "corpus/acme/sops/sop_01.txt"
+      ],
+      "top_5": [
+        "corpus/acme/sops/sop_01.txt",
+        "corpus/acme/sops/sop_06.txt",
+        "corpus/acme/rate_sheets/rate_sheet_02.txt",
+        "corpus/acme/rate_sheets/rate_sheet_07.txt",
+        "corpus/acme/rate_sheets/rate_sheet_12.txt"
+      ]
+    },
+    {
+      "id": "q034",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/acme/shipments/shipment_0002.txt",
+        "corpus/acme/sops/sop_05.txt"
+      ],
+      "top_5": [
+        "corpus/acme/shipments/shipment_0002.txt",
+        "corpus/acme/sops/sop_05.txt",
+        "corpus/acme/shipments/shipment_0007.txt",
+        "corpus/acme/shipments/shipment_0012.txt",
+        "corpus/acme/sops/sop_02.txt"
+      ]
+    },
+    {
+      "id": "q035",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/acme/rate_sheets/rate_sheet_01.txt",
+        "corpus/acme/rate_sheets/rate_sheet_02.txt"
+      ],
+      "top_5": [
+        "corpus/acme/rate_sheets/rate_sheet_02.txt",
+        "corpus/acme/rate_sheets/rate_sheet_07.txt",
+        "corpus/acme/rate_sheets/rate_sheet_12.txt",
+        "corpus/acme/rate_sheets/rate_sheet_05.txt",
+        "corpus/acme/rate_sheets/rate_sheet_10.txt"
+      ]
+    },
+    {
+      "id": "q036",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/acme/rate_sheets/rate_sheet_02.txt",
+        "corpus/acme/sops/sop_02.txt"
+      ],
+      "top_5": [
+        "corpus/acme/sops/sop_02.txt",
+        "corpus/acme/sops/sop_07.txt",
+        "corpus/acme/rate_sheets/rate_sheet_02.txt",
+        "corpus/acme/rate_sheets/rate_sheet_07.txt",
+        "corpus/acme/rate_sheets/rate_sheet_12.txt"
+      ]
+    },
+    {
+      "id": "q037",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/globex/rate_sheets/rate_sheet_01.txt",
+        "corpus/globex/shipments/shipment_0002.txt"
+      ],
+      "top_5": [
+        "corpus/globex/shipments/shipment_0002.txt",
+        "corpus/globex/shipments/shipment_0001.txt",
+        "corpus/globex/shipments/shipment_0005.txt",
+        "corpus/globex/shipments/shipment_0009.txt",
+        "corpus/globex/shipments/shipment_0003.txt"
+      ]
+    },
+    {
+      "id": "q038",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/globex/contracts/carrier_agreement_kestrel_haulage_03.txt",
+        "corpus/globex/sops/sop_01.txt"
+      ],
+      "top_5": [
+        "corpus/globex/sops/sop_01.txt",
+        "corpus/globex/sops/sop_06.txt",
+        "corpus/globex/contracts/carrier_agreement_kestrel_haulage_03.txt",
+        "corpus/globex/contracts/carrier_agreement_kestrel_haulage_04.txt",
+        "corpus/globex/contracts/carrier_agreement_kestrel_haulage_05.txt"
+      ]
+    },
+    {
+      "id": "q039",
+      "type": "answerable_multi",
+      "hit_at_1": false,
+      "hit_at_5": true,
+      "reciprocal_rank": 0.333,
+      "expected": [
+        "corpus/globex/contracts/msa_amendment_01.txt",
+        "corpus/globex/shipments/shipment_0002.txt"
+      ],
+      "top_5": [
+        "corpus/globex/contracts/msa_amendment_02.txt",
+        "corpus/globex/contracts/msa_amendment_06.txt",
+        "corpus/globex/shipments/shipment_0002.txt",
+        "corpus/globex/contracts/msa_amendment_01.txt",
+        "corpus/globex/contracts/msa_amendment_07.txt"
+      ]
+    },
+    {
+      "id": "q040",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/globex/rate_sheets/rate_sheet_01.txt",
+        "corpus/globex/rate_sheets/rate_sheet_05.txt"
+      ],
+      "top_5": [
+        "corpus/globex/rate_sheets/rate_sheet_05.txt",
+        "corpus/globex/rate_sheets/rate_sheet_10.txt",
+        "corpus/globex/rate_sheets/rate_sheet_02.txt",
+        "corpus/globex/rate_sheets/rate_sheet_07.txt",
+        "corpus/globex/rate_sheets/rate_sheet_03.txt"
+      ]
+    },
+    {
+      "id": "q041",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/globex/rate_sheets/rate_sheet_02.txt",
+        "corpus/globex/sops/sop_02.txt"
+      ],
+      "top_5": [
+        "corpus/globex/sops/sop_02.txt",
+        "corpus/globex/sops/sop_07.txt",
+        "corpus/globex/sops/sop_03.txt",
+        "corpus/globex/sops/sop_04.txt",
+        "corpus/globex/sops/sop_05.txt"
+      ]
+    },
+    {
+      "id": "q042",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/globex/sops/sop_04.txt",
+        "corpus/globex/sops/sop_05.txt"
+      ],
+      "top_5": [
+        "corpus/globex/sops/sop_05.txt",
+        "corpus/globex/sops/sop_04.txt",
+        "corpus/globex/sops/sop_02.txt",
+        "corpus/globex/sops/sop_03.txt",
+        "corpus/globex/sops/sop_07.txt"
+      ]
+    },
+    {
+      "id": "q043",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/meridian/rate_sheets/rate_sheet_01.txt",
+        "corpus/meridian/shipments/shipment_0002.txt"
+      ],
+      "top_5": [
+        "corpus/meridian/shipments/shipment_0002.txt",
+        "corpus/meridian/shipments/shipment_0001.txt",
+        "corpus/meridian/shipments/shipment_0005.txt",
+        "corpus/meridian/shipments/shipment_0003.txt",
+        "corpus/meridian/shipments/shipment_0004.txt"
+      ]
+    },
+    {
+      "id": "q044",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/meridian/shipments/shipment_0006.txt",
+        "corpus/meridian/sops/sop_01.txt"
+      ],
+      "top_5": [
+        "corpus/meridian/sops/sop_01.txt",
+        "corpus/meridian/sops/sop_06.txt",
+        "corpus/meridian/shipments/shipment_0006.txt",
+        "corpus/meridian/shipments/shipment_0002.txt",
+        "corpus/meridian/shipments/shipment_0001.txt"
+      ]
+    },
+    {
+      "id": "q045",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/meridian/rate_sheets/rate_sheet_01.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_03.txt"
+      ],
+      "top_5": [
+        "corpus/meridian/rate_sheets/rate_sheet_03.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_08.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_02.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_07.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_05.txt"
+      ]
+    },
+    {
+      "id": "q046",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/meridian/contracts/msa_amendment_01.txt",
+        "corpus/meridian/sops/sop_05.txt"
+      ],
+      "top_5": [
+        "corpus/meridian/sops/sop_05.txt",
+        "corpus/meridian/contracts/msa_amendment_01.txt",
+        "corpus/meridian/contracts/msa_amendment_02.txt",
+        "corpus/meridian/contracts/msa_amendment_06.txt",
+        "corpus/meridian/sops/sop_02.txt"
+      ]
+    },
+    {
+      "id": "q047",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/meridian/rate_sheets/rate_sheet_04.txt",
+        "corpus/meridian/sops/sop_04.txt"
+      ],
+      "top_5": [
+        "corpus/meridian/sops/sop_04.txt",
+        "corpus/meridian/sops/sop_02.txt",
+        "corpus/meridian/sops/sop_03.txt",
+        "corpus/meridian/sops/sop_05.txt",
+        "corpus/meridian/sops/sop_07.txt"
+      ]
+    },
+    {
+      "id": "q048",
+      "type": "answerable_multi",
+      "hit_at_1": true,
+      "hit_at_5": true,
+      "reciprocal_rank": 1.0,
+      "expected": [
+        "corpus/meridian/rate_sheets/rate_sheet_05.txt",
+        "corpus/meridian/sops/sop_03.txt"
+      ],
+      "top_5": [
+        "corpus/meridian/sops/sop_03.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_05.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_10.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_04.txt",
+        "corpus/meridian/rate_sheets/rate_sheet_09.txt"
+      ]
+    }
+  ],
+  "cross_tenant_trap_probes": [
+    {
+      "id": "q069",
+      "question": "What is Acme Freight's fuel surcharge?",
+      "own_tenant_top1": "corpus/globex/rate_sheets/rate_sheet_01.txt"
+    },
+    {
+      "id": "q070",
+      "question": "What is Globex Logistics's fuel surcharge?",
+      "own_tenant_top1": "corpus/acme/shipments/shipment_0004.txt"
+    },
+    {
+      "id": "q071",
+      "question": "What is Meridian Transport's fuel surcharge?",
+      "own_tenant_top1": "corpus/globex/rate_sheets/rate_sheet_01.txt"
+    },
+    {
+      "id": "q072",
+      "question": "How many hours of free time does Acme Freight allow before detention charges apply?",
+      "own_tenant_top1": "corpus/meridian/sops/sop_01.txt"
+    },
+    {
+      "id": "q073",
+      "question": "How many hours of free time does Meridian Transport allow before detention charges apply?",
+      "own_tenant_top1": "corpus/globex/sops/sop_01.txt"
+    },
+    {
+      "id": "q074",
+      "question": "What rate does Kestrel Haulage charge Globex Logistics per hundredweight?",
+      "own_tenant_top1": "corpus/meridian/rate_sheets/rate_sheet_02.txt"
+    },
+    {
+      "id": "q075",
+      "question": "What rate does Kestrel Haulage charge Globex Logistics per hundredweight?",
+      "own_tenant_top1": "corpus/acme/contracts/carrier_agreement_kestrel_haulage_03.txt"
+    }
+  ]
+}
