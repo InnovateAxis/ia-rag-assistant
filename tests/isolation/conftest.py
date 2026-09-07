@@ -5,12 +5,20 @@ the same `pgvector/pgvector:pg16` image 0.5's CI uses. Never a mock and never
 sqlite: the guarantee under test is a PostgreSQL row-level security policy, and
 a fake database would happily confirm a policy that does not exist.
 
-Two properties of this file are load-bearing:
+Three properties of this file are load-bearing:
 
-* **Both tenants are seeded for the whole session**, in the container fixture
-  rather than in `seed`, so that no test can run against an empty table even if
-  it never requests the seed fixture. An empty table passes every isolation test
-  ever written (CLAUDE.md invariant 5).
+* **The seed is a trap, and the shape of it is deliberate.** `ten_acme` holds a
+  document and chunks, one of them carrying the exact vector the query asks for.
+  `ten_globex` holds a document — so the tenant genuinely exists and foreign
+  keys are valid — and **no chunks at all**. The runbook's core test queries with
+  no WHERE clause and asserts an empty result, which is only meaningful when the
+  querying tenant owns nothing: a perfect-match vector still comes back empty,
+  because the only row that matches belongs to somebody else. Seeding globex any
+  chunks of its own would make that assertion fail while proving nothing.
+* **Seeding happens for the whole session**, in the container fixture rather than
+  in `seed`, so no test can run against an empty table even if it never requests
+  the seed fixture. An empty table passes every isolation test ever written
+  (CLAUDE.md invariant 5).
 * **The connection is `ia_rag_service`**, which is NOSUPERUSER and NOBYPASSRLS.
   Connecting as the owner or a superuser would bypass every policy in `0002`
   and make the entire suite vacuous.
@@ -59,27 +67,19 @@ def pytest_collection_modifyitems(config, items):
                     f"expected at least {MIN_ISOLATION_TESTS}", returncode=2)
 
 
-def _vector(seed: int, lo: int, hi: int) -> list[float]:
-    """A deterministic positive vector supported only on [lo, hi).
+def _acme_vector(seed: int) -> list[float]:
+    """A deterministic positive vector, supported on the first half of the space.
 
-    Acme's vectors and Globex's vectors occupy disjoint halves of the space, so
-    their cosine distance is exactly 1.0 while a repeat of Acme's own vector is
-    exactly 0.0. That makes "the cross-tenant row would have been the top hit"
-    a fact about the data rather than a hope about the random seed.
+    The query in the core test is handed acme's own stored vector, so the top hit
+    at cosine distance exactly 0.0 is a fact about the data rather than a hope
+    about the random seed. Which is the point: the row that ranks first for the
+    query is the one the querying tenant must not be able to see.
     """
     rng = random.Random(seed)
     v = [0.0] * EMBED_DIM
-    for i in range(lo, hi):
+    for i in range(EMBED_DIM // 2):
         v[i] = rng.uniform(0.1, 1.0)
     return v
-
-
-def _acme_vector(seed: int) -> list[float]:
-    return _vector(seed, 0, EMBED_DIM // 2)
-
-
-def _globex_vector(seed: int) -> list[float]:
-    return _vector(seed, EMBED_DIM // 2, EMBED_DIM)
 
 
 @dataclass
@@ -152,56 +152,64 @@ async def _provision(admin_dsn: str, service_dsn: str) -> Seed:
     # written the way the application will write them. This exercises the
     # policy's WITH CHECK on the way in; a policy that rejected legitimate
     # in-tenant writes would fail here rather than silently seed nothing.
+    # Only acme is given chunks. Globex's document row above is the whole of its
+    # data: the tenant exists, its foreign keys resolve, and it owns nothing in
+    # document_chunks. See the module docstring for why that asymmetry is the
+    # point rather than an oversight.
+    acme_rows = [(acme_chunk_id, 0, "acme rate sheet zone 3", acme_exact)] + [
+        (uuid.uuid4(), i, f"acme chunk {i}", _acme_vector(10 + i)) for i in (1, 2)
+    ]
+
     svc = await _connect(service_dsn)
     try:
-        batches = (
-            (
-                ACME,
-                acme_doc,
-                [(acme_chunk_id, 0, "acme rate sheet zone 3", acme_exact)]
-                + [
-                    (uuid.uuid4(), i, f"acme chunk {i}", _acme_vector(10 + i))
-                    for i in (1, 2)
-                ],
-            ),
-            (
-                GLOBEX,
-                globex_doc,
-                [
-                    (uuid.uuid4(), i, f"globex chunk {i}", _globex_vector(100 + i))
-                    for i in (0, 1, 2)
-                ],
-            ),
-        )
-        for tenant, doc_id, rows in batches:
-            async with svc.transaction():
+        async with svc.transaction():
+            await svc.execute(
+                "select set_config('request.jwt.claims', $1, true)",
+                json.dumps({"tenant_id": ACME}),
+            )
+            for chunk_id, idx, content, embedding in acme_rows:
                 await svc.execute(
-                    "select set_config('request.jwt.claims', $1, true)",
-                    json.dumps({"tenant_id": tenant}),
+                    INSERT_CHUNK, chunk_id, ACME, acme_doc, idx, content, embedding
                 )
-                for chunk_id, idx, content, embedding in rows:
-                    await svc.execute(
-                        INSERT_CHUNK, chunk_id, tenant, doc_id, idx, content, embedding
-                    )
     finally:
         await svc.close()
 
-    # Invariant 5, enforced rather than assumed. If either tenant seeded zero
-    # rows, every test below would pass while proving nothing at all.
+    # Invariant 5, enforced rather than assumed, plus the asymmetry the frozen
+    # test depends on. Checked from a superuser connection so the counts are the
+    # true contents of the table rather than one tenant's view of it.
     admin = await asyncpg.connect(admin_dsn)
     try:
-        counts = {
+        chunks = {
             r["tenant_id"]: r["n"]
             for r in await admin.fetch(
                 "select tenant_id, count(*) as n from document_chunks group by tenant_id"
             )
         }
+        docs = {
+            r["tenant_id"]: r["n"]
+            for r in await admin.fetch(
+                "select tenant_id, count(*) as n from documents group by tenant_id"
+            )
+        }
     finally:
         await admin.close()
-    if counts.get(ACME, 0) < 1 or counts.get(GLOBEX, 0) < 1:
+
+    if chunks.get(ACME, 0) < 1:
         raise RuntimeError(
-            "refusing to run the isolation suite against a table that is not "
-            f"seeded for two tenants; got {counts}"
+            "refusing to run the isolation suite: ten_acme seeded no chunks, so "
+            f"there is no bait and every test would pass vacuously; got {chunks}"
+        )
+    if chunks.get(GLOBEX, 0) != 0:
+        raise RuntimeError(
+            "refusing to run the isolation suite: ten_globex must own zero "
+            "chunks. test_similarity_search_cannot_cross_tenants queries with no "
+            "WHERE clause and asserts an empty result, which stops meaning "
+            f"anything the moment globex owns rows of its own; got {chunks}"
+        )
+    if docs.get(ACME, 0) < 1 or docs.get(GLOBEX, 0) < 1:
+        raise RuntimeError(
+            "refusing to run the isolation suite: both tenants need a documents "
+            f"row so that each genuinely exists and foreign keys resolve; got {docs}"
         )
 
     return Seed(

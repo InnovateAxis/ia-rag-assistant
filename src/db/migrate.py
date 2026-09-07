@@ -29,6 +29,15 @@ from src.db.bootstrap_roles import admin_dsn, ensure_service_role
 
 MIGRATIONS_DIR = Path(__file__).resolve().parents[2] / "migrations"
 
+# Bookkeeping owned by this module, not a migration. The runbook's SQL files stay
+# byte-identical; nothing in migrations/ knows this table exists.
+LEDGER_DDL = """
+create table if not exists schema_migrations (
+  filename   text primary key,
+  applied_at timestamptz not null default now()
+);
+"""
+
 
 class MissingPreconditionError(RuntimeError):
     """A table this repo does not own is absent from the target database."""
@@ -51,13 +60,33 @@ async def assert_documents_table_exists(conn: asyncpg.Connection) -> None:
         )
 
 
+async def applied_migrations(conn: asyncpg.Connection) -> set[str]:
+    await conn.execute(LEDGER_DDL)
+    return {r["filename"] for r in await conn.fetch("select filename from schema_migrations")}
+
+
 async def apply_migrations(conn: asyncpg.Connection, directory: Path | None = None) -> list[Path]:
+    """Apply every migration not yet recorded in the ledger.
+
+    Re-running is a no-op rather than an error. Without the ledger a second run
+    aborts on `create table document_chunks`, and — because a failed run leaves
+    whatever it had already applied in place — a partially applied database can
+    never be brought forward by re-running.
+    """
+    already = await applied_migrations(conn)
     applied: list[Path] = []
     for path in migration_files(directory):
+        if path.name in already:
+            continue
         sql = path.read_text(encoding="utf-8")
-        # One transaction per file: a migration either lands whole or not at all.
+        # One transaction per file, ledger row included: a migration and the
+        # record of it land together or not at all, so the ledger can never
+        # claim a migration that did not fully apply.
         async with conn.transaction():
             await conn.execute(sql)
+            await conn.execute(
+                "insert into schema_migrations (filename) values ($1)", path.name
+            )
         applied.append(path)
     return applied
 
@@ -77,7 +106,7 @@ async def main() -> None:
     for path in applied:
         print(f"applied {path.name}")
     if not applied:
-        print(f"no migrations found in {MIGRATIONS_DIR}")
+        print("nothing to apply; every migration is already recorded")
 
 
 if __name__ == "__main__":
