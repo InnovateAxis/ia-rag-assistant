@@ -106,10 +106,17 @@ Disputes resolved under {tenant_config['display_name']}'s operational guidelines
 """
 
 
-def generate_contract_filename(is_carrier: bool, doc_num: int) -> str:
-    """Generate contract filename."""
+def generate_contract_filename(tenant_slug: str, is_carrier: bool, doc_num: int) -> str:
+    """Generate contract filename.
+
+    Only Acme and Globex have Kestrel carrier agreements.
+    Meridian has generic carrier agreements.
+    """
     if is_carrier:
-        return f"carrier_agreement_kestrel_haulage_{doc_num:02d}.txt"
+        if tenant_slug in ("acme", "globex"):
+            return f"carrier_agreement_kestrel_haulage_{doc_num:02d}.txt"
+        else:  # meridian
+            return f"carrier_agreement_generic_{doc_num:02d}.txt"
     else:
         return f"msa_amendment_{doc_num:02d}.txt"
 
@@ -316,7 +323,7 @@ def generate_corpus(output_dir: Path) -> dict:
                     content = generate_contract(
                         tenant_slug, config, doc_num, is_carrier_agreement=is_carrier
                     )
-                    doc_name = generate_contract_filename(is_carrier, doc_num)
+                    doc_name = generate_contract_filename(tenant_slug, is_carrier, doc_num)
                 elif category == "rate_sheets":
                     content = generate_rate_sheet(tenant_slug, config, doc_num)
                     doc_name = f"rate_sheet_{doc_num:02d}.txt"
@@ -328,7 +335,7 @@ def generate_corpus(output_dir: Path) -> dict:
                     doc_name = f"shipment_{doc_num:04d}.txt"
 
                 doc_path = category_dir / doc_name
-                doc_path.write_text(content, encoding="utf-8")
+                doc_path.write_text(content, encoding="utf-8", newline="\n")
 
     return stats
 
@@ -400,7 +407,7 @@ Every document is generated with placeholder business logic and fictitious shipm
 This corpus is safe for source control and may be freely shared as it contains no production data.
 """
 
-    (output_dir / "README.md").write_text(readme_content, encoding="utf-8")
+    (output_dir / "README.md").write_text(readme_content, encoding="utf-8", newline="\n")
 
 
 if __name__ == "__main__":

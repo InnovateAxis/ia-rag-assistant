@@ -1,0 +1,9 @@
+# Ensure all text files use LF line endings in the repository
+* text=auto
+*.txt text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.sql text eol=lf
