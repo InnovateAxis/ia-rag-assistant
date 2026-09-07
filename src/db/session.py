@@ -5,15 +5,15 @@ from typing import AsyncGenerator
 from asyncpg import Pool
 
 
-# Pool is initialized elsewhere; this module enforces it is only accessed here.
-# An import-lint rule forbids importing pool outside this module.
+# Pool is initialized elsewhere; this module is the sole importer of asyncpg.
+# pyproject.toml's lint-imports config forbids all other src.* modules from importing asyncpg.
 pool: Pool
 
 
 @asynccontextmanager
 async def session(tenant_id: str | None) -> AsyncGenerator:
     """Every query in this service goes through here. There is no other
-    path to the pool, enforced by an import-lint rule.
+    path to the pool; asyncpg is forbidden to all other src.* modules by lint-imports.
 
     Args:
         tenant_id: The tenant identifier to set in the request context.

@@ -27,6 +27,7 @@ package = false
 
 [dependency-groups]
 dev = [
+    "import-linter>=2.2.2",
     "mypy>=2.3.1",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
@@ -63,3 +64,18 @@ mypy_path = "."
 # Neither ships a py.typed marker.
 module = ["asyncpg.*", "testcontainers.*"]
 ignore_missing_imports = true
+
+[tool.lint-imports]
+# Enforce that only src.db.session may import asyncpg directly for application code.
+# Interpretation: module-level granularity. The "pool" lives in src.db.session as a module-level
+# variable. Application modules may not import asyncpg; infrastructure modules (bootstrap_roles,
+# migrate) are allowed direct asyncpg connections for setup purposes.
+# This prevents accidental direct connection creation in application code outside the session
+# context manager, where is_local=true would not protect against tenant context leakage.
+root_package = "src"
+
+[[tool.lint-imports.contracts]]
+name = "forbid-direct-asyncpg-access"
+type = "forbidden"
+source_modules = ["src.api", "src.auth", "src.chunking", "src.generate", "src.ingest", "src.llm", "src.orchestrate", "src.retrieval", "src.telemetry"]
+target_modules = ["asyncpg"]
