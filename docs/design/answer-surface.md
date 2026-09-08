@@ -49,7 +49,7 @@ These principles apply to all states except error:
 - **Streaming begins immediately:** As soon as the orchestrator sends the answer generation request to the LLM, the first UI token appears on screen.
 - **Character-by-character flow:** Tokens stream and render one at a time. Users see the answer forming in real time, including any streaming pauses if LLM latency spikes.
 - **Citations stream inline:** When the LLM emits `[1]` or `[2]`, those brackets appear inline without waiting for the full claim to complete. The citation number streams as part of the prose.
-- **Source panel updates live:** As each new document is cited for the first time (e.g., first `[1]`), it appears in the source panel below the answer. Panel additions do not interrupt streaming; they populate in the background.
+- **Source panel updates live:** As each new document is cited for the first time in the streaming answer (e.g., when `[1]` first appears), that source enters the source panel below the answer. Subsequent reuses of the same citation number (e.g., a second `[1]` later in the answer) do not add a second entry. Panel additions do not interrupt streaming; they populate in the background.
 - **Streaming completes:** When the LLM finishes (signals end-of-sequence), streaming stops. The answer is now complete and interactive (sources are clickable; if weak, the confidence cue has appeared).
 
 ### No state transitions during streaming
@@ -134,8 +134,7 @@ These are examples; the LLM generates the actual text based on what was retrieve
 **When it applies:** The orchestrator has determined that no answer should be generated because:
 
 1. **Retrieval returned nothing:** The search returned zero documents.
-2. **Retrieval returned no relevant documents:** Documents were returned but scored below the refusal threshold (set at 4.1).
-3. **Refusal condition applies:** A special case like cross-tenant traps (RLS prevented serving another tenant's data; Invariant 1).
+2. **Retrieval returned no relevant documents:** Documents were returned but scored below the refusal threshold (set at 4.1). This includes questions about other tenants' data: tenant isolation is enforced by the database (Invariant 1), which prevents serving another tenant's rows to the application. A question in one tenant's session context about another tenant's data simply retrieves nothing relevant from that tenant's own scope and is refused via the 4.1 score threshold, per CARRYFORWARD F25.
 
 ### Refusal copy requirements
 
