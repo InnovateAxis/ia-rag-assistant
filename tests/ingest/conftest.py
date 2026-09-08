@@ -68,8 +68,16 @@ async def _provision(admin_dsn: str) -> dict[str, uuid.UUID]:
         await admin.execute(_CREATE_DOCUMENTS)
         await ensure_service_role(admin)
         await apply_migrations(admin)
-        # Ingest only ever reads documents; no insert/update/delete grant.
-        await admin.execute(f"grant select on documents to {SERVICE_ROLE}")
+        # Ingest only ever reads documents. `delete` is granted alongside
+        # `select` for step 2.5's cascade tests, which have to issue the
+        # `delete from documents` from a role RLS actually applies to:
+        # `ia_rag_service` is NOSUPERUSER/NOBYPASSRLS, so a delete in its
+        # session is genuinely scoped by `documents_tenant_isolation` above,
+        # while the same statement on this admin connection (a superuser)
+        # would bypass every policy and prove nothing about which tenant
+        # issued it. Still no `insert`/`update`: this suite's document rows
+        # are always created admin-side, standing in for Pod P (C7).
+        await admin.execute(f"grant select, delete on documents to {SERVICE_ROLE}")
 
         doc_ids = {tenant: uuid.uuid4() for tenant in TENANTS}
         await admin.executemany(
@@ -93,17 +101,67 @@ def _postgres():
     ) as container:
         host = container.get_container_host_ip()
         port = container.get_exposed_port(5432)
-        admin_dsn = f"postgresql://postgres:postgres@{host}:{port}/postgres"
+        admin = f"postgresql://postgres:postgres@{host}:{port}/postgres"
         service_dsn = (
             f"postgresql://{SERVICE_ROLE}:{service_password()}@{host}:{port}/postgres"
         )
-        doc_ids = asyncio.run(_provision(admin_dsn))
-        yield service_dsn, doc_ids
+        doc_ids = asyncio.run(_provision(admin))
+        yield service_dsn, doc_ids, admin
 
 
 @pytest.fixture
 def doc_ids(_postgres) -> dict[str, uuid.UUID]:
     return _postgres[1]
+
+
+@pytest.fixture
+def admin_dsn(_postgres) -> str:
+    """The superuser DSN, for the two things a service-role session cannot
+    honestly do in a test: create `documents` rows (Pod P's job, C7) and
+    look at `document_chunks` from outside RLS to check that a row is gone
+    rather than merely hidden.
+
+    Never used to exercise application behaviour — a superuser connection
+    ignores every policy in `0002` and would make any assertion about
+    isolation vacuous.
+    """
+    return _postgres[2]
+
+
+@pytest.fixture
+async def fresh_doc_ids(admin_dsn) -> AsyncGenerator[dict[str, uuid.UUID], None]:
+    """One brand-new `documents` row per tenant, created admin-side and
+    dropped afterwards.
+
+    Function-scoped and separate from `doc_ids`, which is seeded once for the
+    whole session: step 2.5's tests delete document rows, and deleting the
+    session-scoped seed would cascade its chunks away underneath every later
+    test in this suite. Tests that destroy a document take one of these
+    instead.
+    """
+    conn = await asyncpg.connect(admin_dsn)
+    ids = {tenant: uuid.uuid4() for tenant in TENANTS}
+    try:
+        await conn.executemany(
+            "insert into documents (id, tenant_id) values ($1, $2)",
+            [(ids[t], t) for t in TENANTS],
+        )
+        yield ids
+    finally:
+        # Cascade clears any chunks the test left behind on these documents.
+        await conn.execute(
+            "delete from documents where id = any($1::uuid[])", list(ids.values())
+        )
+        await conn.close()
+
+
+@pytest.fixture
+def service_dsn(_postgres) -> str:
+    """The `ia_rag_service` DSN — NOSUPERUSER, NOBYPASSRLS, the connection
+    every application query in this project uses. Requested directly only by
+    the test that checks the offboarding verification refuses to report a
+    count over a connection RLS applies to."""
+    return _postgres[0]
 
 
 @pytest.fixture
@@ -120,7 +178,7 @@ async def pool(_postgres) -> AsyncGenerator[asyncpg.Pool, None]:
     tests run. The container underneath (`_postgres`) is still session-scoped
     and only spun up once; only this thin pool binding is per-test.
     """
-    service_dsn, _ = _postgres
+    service_dsn = _postgres[0]
     bound = await db.create_pool(service_dsn)
     try:
         yield bound

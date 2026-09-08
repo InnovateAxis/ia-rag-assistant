@@ -19,6 +19,7 @@ from typing import Protocol
 from uuid import UUID
 
 from src.db import session as db
+from src.ingest.deletion import delete_chunks_for_document
 
 
 class DocumentNotFound(Exception):
@@ -86,8 +87,6 @@ insert into document_chunks
 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 """
 
-_DELETE_EXISTING_CHUNKS = "delete from document_chunks where document_id = $1"
-
 _SELECT_DOCUMENT = (
     "select id, title, storage_key, content_type from documents where id = $1"
 )
@@ -136,10 +135,15 @@ async def ingest(
 
         # Re-ingesting the same document replaces its chunks atomically:
         # delete and every insert below run inside the one transaction this
-        # `async with` block opened. No tenant predicate on the delete
-        # either — RLS already scopes it to `tenant_id` for the life of
-        # this transaction, exactly like every other statement here.
-        await s.execute(_DELETE_EXISTING_CHUNKS, document_id)
+        # `async with` block opened, so a concurrent reader sees the old set
+        # or the new set and never both (step 2.5's second Done-when item;
+        # `tests/ingest/test_deletion.py` proves it against a reader that
+        # samples throughout the write). No tenant predicate on the delete
+        # either — RLS already scopes it to `tenant_id` for the life of this
+        # transaction, exactly like every other statement here. The statement
+        # itself lives in `src.ingest.deletion` (2.5), which owns every chunk
+        # removal in this project; passing `s` keeps it in THIS transaction.
+        await delete_chunks_for_document(s, document_id)
 
         for ec in embedded:
             await s.execute(
