@@ -345,30 +345,34 @@ def chunk_fixed_tokens_sentence_safe(text: str, *, size: int = 512) -> list[RawC
 
 
 def chunk_fixed_chars_naive(text: str, *, size: int = 512) -> list[RawChunk]:
-    """Row 1: the naive baseline — blind `size`-character windows, no
-    sentence safety, no structure. Still respects rule 2's floor (see the
-    module docstring): a window is only cut if BOTH sides would still clear
-    200 tokens, because a chunking step that ships a sub-floor chunk is not
-    "naive", it is broken — rule 2 is stated once, for the pipeline, not
-    once per row of the case-study table.
-    """
-    parsed = parse_structure(text)
-    whole = _whole_document_chunk(parsed)
-    approx_tokens_per_char = count_tokens(whole.text) / max(len(whole.text), 1)
-    min_chars_for_floor = int(FLOOR_TOKENS / approx_tokens_per_char) if approx_tokens_per_char else size
-    if len(whole.text) < size + min_chars_for_floor:
-        return [whole]
+    """Row 1: the naive baseline — genuinely naive. Blind `size`-character
+    windows over the RAW input text, no sentence safety, no floor guard,
+    and — this is the part that took two attempts to get right — no
+    `parse_structure` call at all. A structurally-blind splitter that first
+    calls the structure parser to strip the title and metadata block before
+    slicing is not naive, it has just outsourced its structure-awareness to
+    a function it claims not to use.
 
-    chunks: list[RawChunk] = []
-    start = 0
-    n = len(whole.text)
-    while start < n:
-        end = min(start + size, n)
-        if n - end < min_chars_for_floor:
-            end = n
-        chunks.append(RawChunk(text=whole.text[start:end], section_path=(parsed.title,)))
-        start = end
-    return chunks
+    **Two corrections after user review, both against the same underlying
+    mistake: treating rule 2's 200-token floor, and then the title/metadata
+    split, as though they applied to every row.** They do not — row 1's
+    entire purpose in the case-study table is to BE the naive comparison
+    point. The first fix removed the floor guard but still sliced
+    `_whole_document_chunk(parse_structure(text)).text` (body only, title
+    and metadata already stripped) — silently identical to rows 2-3 again,
+    for a second, subtler reason: on this corpus the body alone never
+    exceeds 512 characters (max 457) even though the full raw file does (max
+    649, 57 of 111 documents over 512). Splitting the raw `text` argument
+    directly is what makes this row actually naive AND actually engage.
+
+    Nothing under `src/` outside this function calls it — confirmed by
+    `grep -rn chunk_fixed_chars_naive src/`, which returns only this
+    definition (plus this docstring's own mention of the command).
+    """
+    return [
+        RawChunk(text=text[start : start + size], section_path=())
+        for start in range(0, len(text), size)
+    ] or [RawChunk(text=text, section_path=())]
 
 
 def _pack_sentences(sentences: list[str], target_tokens: int, title: str) -> list[RawChunk]:
