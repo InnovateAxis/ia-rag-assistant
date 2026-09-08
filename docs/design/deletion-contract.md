@@ -62,13 +62,34 @@ that there is no window in which the two states disagree. The test rolls the
 deleting transaction back and watches the chunks come back with it; a cascade
 running in its own transaction, or a nightly sweep, could not do that.
 
+Being exact about what that test adds, because it is easy to overclaim: given
+`on delete cascade` on a non-deferrable constraint, PostgreSQL could not
+behave otherwise, so the test is not an independent discovery — it is a
+regression test that pins the schema declaration from the other side. It
+would fail on a change to `on delete no action` plus a cleanup job, and on
+`deferrable initially deferred`. Its first assertion (the count going to zero
+inside the transaction) does not discriminate on its own; a separately
+committed removal would satisfy it. The rollback assertion is the load-bearing
+one.
+
 The update clause is the same property under load: a reader sampling a
 document continuously while its chunks are replaced sees the old set or the
-new set, never a mixture and never an empty document. The measurement, at
-`REPLACEMENT_CHUNKS = 100`: 32 samples across the write, 0 of them dirty. The
-same sampler over the same replacement split across two transactions caught 31
-dirty states out of 33, which is what makes the first number a result rather
-than an artefact of sampling too slowly.
+new set, never a mixture and never an empty document. What makes that a result
+rather than an artefact of sampling too slowly is
+`test_a_two_transaction_replacement_is_caught_by_the_same_sampler`, which runs
+the identical sampler over the identical workload split across two
+transactions and asserts it catches dirty states. Sample counts vary run to
+run and no specific number is claimed here; the discrimination is what
+reproduces. The sampler's period is a few milliseconds, so a sub-millisecond
+dirty window is not established as detectable — the smallest non-atomic shape
+this codebase can produce is well above that.
+
+One honest gap in that control: every dirty state it produces is the *empty*
+one, because the delete precedes the inserts. A reader is never shown catching
+a "both versions present" state, and could not be — `unique (document_id,
+chunk_index)` would reject the overlap, and no code path writes new chunks
+before removing old ones. "Never leave both versions" is therefore guaranteed
+by statement ordering plus a constraint, not by an observed control.
 
 ## The limit: one tenant's delete can destroy another tenant's chunk
 
@@ -146,6 +167,14 @@ Two consequences of that, both deliberate:
   hand-written tenant filter substitutes a promise about code discipline for
   the policy. Here the point is to look at what the policy would hide, which
   is why it cannot live there.
+
+  A limit of that enforcement, worth knowing before relying on it: the
+  import-linter contract forbids `asyncpg`, not this module. The seam holds
+  today only because `offboard_cli` imports `asyncpg` directly, which puts it
+  on a forbidden chain. A future infrastructure module that carried a tenant
+  predicate but no `asyncpg` import would be importable from application code
+  with no contract failure. The rule above is stated in prose because the tool
+  does not state it.
 * **The count refuses to report a number it cannot trust.** If the connecting
   role is subject to RLS, `count_tenant_rows` raises
   `VerificationNotTrustworthy` instead of returning the zero it would
@@ -156,8 +185,48 @@ Two consequences of that, both deliberate:
 
 Invariant 4 is untouched throughout: no second application pool (removal goes
 through `src.db.session`'s one pool), no `BYPASSRLS` grant to
-`ia_rag_service`, and the verification connection is the same short-lived
-admin connection `migrate.py` already opens for schema work.
+`ia_rag_service`, and the verification is one short-lived connection, opened
+and closed.
+
+### The two connections must not be the same one
+
+This is the part that was shipped wrong at `32a192c` and found by
+`ia-verifier`, and it is recorded here because the failure was silent and
+total rather than noisy.
+
+The purge runs on `src.db.session`'s pool, from `DATABASE_URL`, and **must**
+be the service role: its statements carry no tenant predicate, so the policy
+is the only thing that makes them mean one tenant. The verification **must**
+be a role the policy does not apply to, or the count is zero for every tenant
+regardless. No single DSN satisfies both requirements.
+
+The first version resolved the verification through
+`bootstrap_roles.admin_dsn`, which also reads `DATABASE_URL`, so the two were
+necessarily the same connection. Pointed at the service role, the count
+refused and offboarding never completed. Pointed at the admin role — which the
+module's own error message instructed the operator to do — the no-WHERE purge
+ran unscoped: measured on a seeded database, offboarding one tenant took the
+other tenant's chunks from 2 to 0, exited 0, and logged the offboarded
+tenant's remaining count as a truthful zero.
+
+Two independent fixes, either of which alone would have stopped it:
+
+* `IA_RAG_VERIFICATION_DSN` is a separate variable with no fallback to
+  `DATABASE_URL`, and `verification_dsn()` refuses if it is unset or equal to
+  it.
+* `src.ingest.deletion.purge_tenant` asks, inside the same transaction as the
+  deletes, whether the current role bypasses RLS, and raises
+  `UnscopedPurgeRefused` if it does. The precondition its statements depend on
+  for their meaning is checked rather than assumed.
+
+Both are covered by tests that fail when the corresponding guard is removed
+(`test_purge_refuses_to_run_on_a_connection_that_bypasses_rls`,
+`test_verification_dsn_refuses_to_fall_back_to_the_application_pool`).
+
+The general lesson is narrower than "be careful with DSNs": a statement whose
+safety comes entirely from the connection it runs on has a precondition, and a
+precondition that a caller can invalidate by editing an environment variable
+belongs in an assertion next to the statement, not in a docstring.
 
 ## What this repository does not own
 

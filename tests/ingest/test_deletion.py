@@ -38,12 +38,19 @@ import pytest
 from src.db import offboard_cli
 from src.db import session as db
 from src.db.offboard_cli import (
+    VERIFICATION_DSN_ENV,
     TenantNotEmpty,
     VerificationNotTrustworthy,
     count_tenant_rows,
     offboard_tenant,
+    verification_dsn,
 )
-from src.ingest.deletion import PurgeCounts, delete_document_chunks
+from src.ingest.deletion import (
+    PurgeCounts,
+    UnscopedPurgeRefused,
+    delete_document_chunks,
+    purge_tenant,
+)
 from src.ingest.pipeline import Chunk, EmbeddedChunk, ingest
 
 ACME = "ten_acme"
@@ -497,3 +504,73 @@ async def test_offboarding_reports_failure_when_the_purge_silently_did_nothing(
 
     assert caught.value.tenant_id == ACME
     assert caught.value.remaining.chunks >= 2
+
+
+# ---------------------------------------------------------------------------
+# 6. The purge's precondition, and the configuration that can remove it.
+#
+# Found by ia-verifier at 32a192c, which ran the shipped `python -m` entry
+# point against a real database under both plausible values of DATABASE_URL
+# and measured that one of them deleted every tenant's chunks and exited 0.
+# These are the tests that would have caught it.
+# ---------------------------------------------------------------------------
+
+
+async def test_purge_refuses_to_run_on_a_connection_that_bypasses_rls(
+    fresh_doc_ids, service_dsn, admin_dsn
+):
+    """`purge_tenant`'s statements carry no tenant predicate, so the policy is
+    the only thing that makes them mean "this tenant". Bound to a pool that
+    bypasses RLS they would mean "every tenant", and the offboarding would
+    still report success, because the count for the tenant being removed is
+    then truthfully zero.
+
+    Note this test does NOT request the `pool` fixture: it binds the pool to
+    the superuser DSN itself, which is the misconfiguration under test.
+    """
+    # Seed through a correctly-scoped pool first.
+    await db.create_pool(service_dsn)
+    try:
+        await _seed(ACME, fresh_doc_ids[ACME], ("acme one", "acme two"))
+        await _seed(GLOBEX, fresh_doc_ids[GLOBEX], ("globex one", "globex two"))
+    finally:
+        await db.close_pool()
+
+    before = await count_tenant_rows(GLOBEX, admin_dsn)
+
+    await db.create_pool(admin_dsn)  # the misconfiguration
+    try:
+        with pytest.raises(UnscopedPurgeRefused) as caught:
+            await purge_tenant(ACME)
+    finally:
+        await db.close_pool()
+
+    assert caught.value.tenant_id == ACME
+    assert (
+        await count_tenant_rows(GLOBEX, admin_dsn) == before
+    ), "the refused purge still reached another tenant's rows"
+    assert (await count_tenant_rows(ACME, admin_dsn)).chunks >= 2, (
+        "the refused purge still deleted the target tenant's rows"
+    )
+
+
+def test_verification_dsn_refuses_to_fall_back_to_the_application_pool(monkeypatch):
+    """The verification connection and the application pool must be two
+    different roles, so they are two different variables with no fallback.
+    Resolving the verification through anything that also reads DATABASE_URL
+    makes them the same connection, which is either a meaningless count or an
+    unscoped purge — there is no value of one variable that is correct for
+    both jobs.
+    """
+    monkeypatch.setenv("DATABASE_URL", "postgresql://ia_rag_service@localhost/x")
+    monkeypatch.delenv(VERIFICATION_DSN_ENV, raising=False)
+
+    with pytest.raises(VerificationNotTrustworthy, match="is not set"):
+        verification_dsn()
+
+    monkeypatch.setenv(VERIFICATION_DSN_ENV, "postgresql://ia_rag_service@localhost/x")
+    with pytest.raises(VerificationNotTrustworthy, match="identical to DATABASE_URL"):
+        verification_dsn()
+
+    monkeypatch.setenv(VERIFICATION_DSN_ENV, "postgresql://postgres@localhost/x")
+    assert verification_dsn() == "postgresql://postgres@localhost/x"

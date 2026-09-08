@@ -42,6 +42,36 @@ from uuid import UUID
 from src.db import session as db
 
 
+class UnscopedPurgeRefused(Exception):
+    """Raised when `purge_tenant` is asked to run its no-WHERE deletes on a
+    connection that row-level security does not apply to.
+
+    `delete from document_chunks` carries no tenant predicate on purpose: the
+    policy is what makes it mean "this tenant's rows". On a superuser or
+    `BYPASSRLS` connection the policy is not consulted and the same statement
+    means "every tenant's rows" — the single most destructive thing this
+    codebase can be made to do, and it would report success while doing it,
+    because the verification count for the tenant being offboarded is
+    truthfully zero afterwards.
+
+    Invariant 4 already forbids connecting that way. This is the check that
+    makes the forbidding structural at the one statement where getting it
+    wrong is unrecoverable.
+    """
+
+    def __init__(self, tenant_id: str, role: str) -> None:
+        super().__init__(
+            f"refusing to purge tenant {tenant_id!r}: this session connects as "
+            f"{role!r}, which bypasses row-level security. The purge statements "
+            "carry no tenant predicate and are scoped only by the policy, so on "
+            "this connection they would delete every tenant's rows. Bind the "
+            "pool to the service role (DATABASE_URL) and keep the "
+            "verification connection separate."
+        )
+        self.tenant_id = tenant_id
+        self.role = role
+
+
 class _Connection(Protocol):
     """The one method these statements need from an asyncpg connection.
 
@@ -78,6 +108,14 @@ _DELETE_CHUNKS_FOR_DOCUMENT = "delete from document_chunks where document_id = $
 _PURGE_CHUNKS = "delete from document_chunks"
 _PURGE_BACKFILL_PROGRESS = "delete from backfill_progress"
 _PURGE_EMBEDDING_CUTOVER = "delete from embedding_cutover"
+
+# The precondition the three statements above depend on for their meaning.
+# Asked inside the same transaction that is about to run them, so there is no
+# window between the check and the deletes.
+_SESSION_BYPASSES_RLS = (
+    "select coalesce(rolsuper or rolbypassrls, false) "
+    "from pg_roles where rolname = current_user"
+)
 
 
 def _rows_affected(status: str) -> int:
@@ -141,8 +179,19 @@ async def purge_tenant(tenant_id: str) -> PurgeCounts:
     "the rows were never visible to me". That verification has to be taken
     from outside the policy, and it lives in `src/db/offboard_cli.py`, which
     is infrastructure and reached as a `python -m` entry point.
+
+    Raises `UnscopedPurgeRefused` if the pool this runs on connects as a role
+    row-level security does not apply to. These statements have no tenant
+    predicate by design, so the policy is the only thing standing between
+    "this tenant's rows" and "the table". That is a precondition, and a
+    precondition a caller can get wrong by editing an environment variable
+    has to be checked rather than assumed.
     """
     async with db.session(tenant_id) as s:
+        if await s.fetchval(_SESSION_BYPASSES_RLS):
+            raise UnscopedPurgeRefused(
+                tenant_id, await s.fetchval("select current_user")
+            )
         chunks = _rows_affected(await s.execute(_PURGE_CHUNKS))
         progress = _rows_affected(await s.execute(_PURGE_BACKFILL_PROGRESS))
         cutover = _rows_affected(await s.execute(_PURGE_EMBEDDING_CUTOVER))

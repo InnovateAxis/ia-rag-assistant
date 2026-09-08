@@ -36,24 +36,58 @@ at what the policy would hide, which is exactly why it cannot live there.
 
 Invariant 4 is untouched: no second application pool (removal goes through
 `src.db.session`'s one pool), no `BYPASSRLS` grant to `ia_rag_service`, and
-this connection is the same short-lived admin connection `migrate.py` opens
-for schema work — opened, read, closed.
+the verification is a single short-lived connection — opened, read, closed.
+
+**The two connections are configured separately and MUST NOT be the same
+one.** The pool comes from `DATABASE_URL` and has to be the service role,
+because the purge statements carry no tenant predicate and the policy is the
+only thing scoping them. The verification comes from
+`IA_RAG_VERIFICATION_DSN` and has to be a role the policy does not apply to,
+or its count is zero for every tenant regardless. An earlier version of this
+module resolved the verification through `bootstrap_roles.admin_dsn`, which
+also reads `DATABASE_URL` — so the two were necessarily the same connection,
+and following this module's own advice to point that variable at the admin
+role ran the no-WHERE purge on a bypassing connection, deleting every
+tenant's chunks and exiting 0 with a truthful zero for the offboarded
+tenant. `verification_dsn()` now refuses to fall back to `DATABASE_URL` or
+to equal it, and `src.ingest.deletion.purge_tenant` independently refuses to
+run at all on a connection that bypasses RLS. Either check alone would have
+stopped it; both are here because the failure is silent and total.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import sys
 from dataclasses import dataclass
 
 import asyncpg
 
 from src.db import session as db
-from src.db.bootstrap_roles import admin_dsn
 from src.ingest.deletion import PurgeCounts, purge_tenant
 
 logger = logging.getLogger(__name__)
+
+# The verification connection gets its OWN environment variable, and there is
+# deliberately no fallback to DATABASE_URL.
+#
+# This is not tidiness. The purge runs on `src.db.session`'s pool, which reads
+# DATABASE_URL and MUST be the service role, because the purge statements have
+# no tenant predicate and RLS is the only thing scoping them. The verification
+# must be the opposite: a role RLS does not apply to, or its count reads zero
+# for every tenant whether or not the purge worked. `bootstrap_roles.admin_dsn`
+# also reads DATABASE_URL, so resolving the verification through it made the
+# two connections the same one: pointed at the service role the verification
+# refused, and pointed at the admin role — which an earlier version of this
+# module actually instructed the operator to do — the no-WHERE purge ran on a
+# bypassing connection and deleted every tenant's chunks while reporting the
+# offboarded tenant's remaining count as a truthful zero.
+#
+# Two different requirements on one variable cannot both be satisfied, so they
+# get two variables, and this one refuses to fall back or to alias.
+VERIFICATION_DSN_ENV = "IA_RAG_VERIFICATION_DSN"
 
 # The deliberate tenant predicate. See the module docstring; these run on an
 # admin connection outside RLS, which is the only place a count of "rows this
@@ -68,12 +102,43 @@ select rolsuper or rolbypassrls from pg_roles where rolname = current_user
 
 
 class VerificationNotTrustworthy(Exception):
-    """Raised when the verification connection is itself subject to RLS.
+    """Raised when the verification connection is itself subject to RLS, or
+    when it has not been configured separately from the application pool.
 
     Such a connection reports zero remaining rows for every tenant, always,
     including one whose data was never deleted. Reporting that number would
     be worse than reporting nothing.
     """
+
+
+def verification_dsn() -> str:
+    """The DSN for the count, from `IA_RAG_VERIFICATION_DSN`.
+
+    Refuses if it is unset, and refuses if it is the same string as
+    `DATABASE_URL`. The second check is the one that matters: a verification
+    connection equal to the application pool's is either RLS-scoped (the
+    count means nothing) or RLS-bypassing (the purge means far too much).
+    Neither is a configuration this entry point may run under, and the two
+    being equal is precisely the mistake that is easy to make and invisible
+    afterwards.
+    """
+    dsn = os.environ.get(VERIFICATION_DSN_ENV)
+    if not dsn:
+        raise VerificationNotTrustworthy(
+            f"{VERIFICATION_DSN_ENV} is not set. Offboarding needs two distinct "
+            "connections: DATABASE_URL (the service role, which RLS scopes, used "
+            f"for the purge) and {VERIFICATION_DSN_ENV} (a role RLS does not "
+            "apply to, used only to count what survived). There is no fallback "
+            "here on purpose — see this module's docstring."
+        )
+    if dsn == os.environ.get("DATABASE_URL"):
+        raise VerificationNotTrustworthy(
+            f"{VERIFICATION_DSN_ENV} is identical to DATABASE_URL. One of the two "
+            "roles must be wrong: the purge needs a connection row-level security "
+            "applies to, and the count needs one it does not. If they are the same "
+            "connection, either the count is meaningless or the purge is unscoped."
+        )
+    return dsn
 
 
 class TenantNotEmpty(Exception):
@@ -107,19 +172,24 @@ async def _assert_sees_past_rls(conn: asyncpg.Connection) -> None:
             f"the verification connection is role {await conn.fetchval('select current_user')!r}, "
             "which row-level security applies to. Every count it returns would be "
             "filtered by the same policy the count exists to check, so it would report "
-            "0 remaining rows for any tenant whether or not the purge worked. Point "
-            "DATABASE_URL at the admin role used for migrations, not at ia_rag_service."
+            f"0 remaining rows for any tenant whether or not the purge worked. Point "
+            f"{VERIFICATION_DSN_ENV} at a role that bypasses RLS. Do NOT point "
+            "DATABASE_URL there instead: the purge runs on that pool and its "
+            "statements carry no tenant predicate, so on a bypassing connection they "
+            "would delete every tenant's rows."
         )
 
 
 async def count_tenant_rows(tenant_id: str, dsn: str | None = None) -> TenantRowCounts:
-    """Count every row this repository still holds for `tenant_id`, from an
-    admin connection that RLS does not filter.
+    """Count every row this repository still holds for `tenant_id`, over a
+    connection RLS does not filter — `IA_RAG_VERIFICATION_DSN` unless `dsn`
+    is passed explicitly (tests do; the entry point does not).
 
     Refuses (`VerificationNotTrustworthy`) rather than returning a number if
-    the connecting role is subject to the policy — see the module docstring.
+    that DSN is unset, is the same as `DATABASE_URL`, or turns out to connect
+    as a role the policy applies to — see the module docstring.
     """
-    conn = await asyncpg.connect(dsn or admin_dsn())
+    conn = await asyncpg.connect(dsn or verification_dsn())
     try:
         await _assert_sees_past_rls(conn)
         return TenantRowCounts(
