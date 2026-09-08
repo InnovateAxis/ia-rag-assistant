@@ -12,16 +12,27 @@ This module is that seam, built the same way `src.db.migrate` and
 never as a second path application code reaches for at query time. It lives
 in `src.db`, which is deliberately absent from `[tool.importlinter]`'s
 `source_modules` — the same infrastructure exception `migrate.py` and
-`bootstrap_roles.py` already rely on — so no application module (`src.api`,
-`src.ingest`, etc.) may import this file's `asyncpg` dependency, but this
-file itself may.
+`bootstrap_roles.py` already rely on — so this file may import `asyncpg`
+directly.
+
+**No module under `src.api`, `src.auth`, `src.chunking`, `src.generate`,
+`src.ingest`, `src.llm`, `src.orchestrate`, `src.retrieval` or
+`src.telemetry` may import this file.** `src.ingest.backfill.run_backfill`
+takes `tenant_ids` as a required argument precisely so it never needs to —
+carry-forward F35: an earlier draft imported `list_tenant_ids` straight into
+`src.ingest.backfill`, which is byte-for-byte the
+`source_module -> ... -> asyncpg` chain `forbid-direct-asyncpg-access`
+exists to break, caught before it shipped. `src/db/backfill_cli.py` is the
+one place this module and `run_backfill` are wired together, because that
+module is not one of the nine `source_modules` packages either.
 
 This is NOT a `BYPASSRLS` grant (Invariant 4 forbids that) and it is NOT a
 second application-side connection pool: `list_tenant_ids` opens one
 short-lived connection, reads, and closes it — there is no pool, no
 long-lived state, and `src.db.session.pool` is untouched. It is also not
-exposed on any query or API path; only `src.ingest.backfill`'s orchestrator
-(an operator-run procedure, not a request handler) calls it.
+exposed on any query or API path; only `src.db.backfill_cli`'s
+`python -m` entry point (an operator-run procedure, not a request handler)
+calls it.
 """
 
 from __future__ import annotations

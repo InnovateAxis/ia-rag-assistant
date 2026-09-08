@@ -29,7 +29,6 @@ all, never on `tenant_id`. The tenant argument each function takes selects
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
@@ -37,7 +36,6 @@ from uuid import UUID
 
 from src.config import settings
 from src.db import session as db
-from src.db.tenants import list_tenant_ids
 from src.llm.embeddings import refuse_on_model_mismatch
 
 DEFAULT_BATCH_SIZE = 500
@@ -167,21 +165,31 @@ async def backfill_tenant(
 async def run_backfill(
     embed: BulkEmbeddingProvider,
     *,
-    tenant_ids: Sequence[str] | None = None,
+    tenant_ids: Sequence[str],
     batch_size: int = DEFAULT_BATCH_SIZE,
 ) -> dict[str, int]:
-    """Drive every tenant's backfill to completion, tenant by tenant, one
-    batch at a time. `tenant_ids` defaults to `src.db.tenants.list_tenant_ids`
-    — the infra-role seam that enumerates tenants from outside any single
-    tenant's RLS context (carry-forward F40). Passing an explicit list is
-    what tests use, so a test never depends on that infra connection.
+    """Drive every tenant in `tenant_ids` to completion, tenant by tenant,
+    one batch at a time.
+
+    `tenant_ids` is required and this module never discovers it itself.
+    Enumerating tenants needs `src.db.tenants.list_tenant_ids` — an
+    infra-role, direct-`asyncpg`, admin-DSN seam outside any tenant's RLS
+    context (carry-forward F40) — and `src.ingest` is one of
+    `pyproject.toml`'s `[tool.importlinter]` `source_modules`, forbidden
+    from reaching `asyncpg` even indirectly. Importing `list_tenant_ids`
+    here would be exactly the chain the contract's `forbid-direct-asyncpg-
+    access` rule exists to catch (carry-forward F35, demonstrated as BROKEN
+    at `6affe26`'s probe 3), and it would also reopen F29's "second path to
+    the pool" in the more dangerous shape of an admin-DSN connection reached
+    from application code. `src/db/backfill_cli.py` is the sanctioned place
+    those two seams meet — it is not one of the nine `source_modules`
+    packages, the same reason `src/db/migrate.py` may import `asyncpg`
+    directly. Call `list_tenant_ids()` there, or in a test, and pass the
+    result in here.
 
     Returns the count of chunks actually backfilled per tenant during this
     run — 0 for a tenant that was already complete.
     """
-    if tenant_ids is None:
-        tenant_ids = await list_tenant_ids()
-
     totals: dict[str, int] = {}
     for tenant_id in tenant_ids:
         total = 0
@@ -279,16 +287,8 @@ async def fetch_active_embedding_metadata(tenant_id: str, document_id: UUID) -> 
     return list(rows)
 
 
-async def _cli_main() -> None:  # pragma: no cover - operator entry point, not exercised by tests
-    """Not invoked by any step's Done-when or by CI. Documented here so a
-    human operator running the real backfill later has a starting point,
-    and so the F40 sequencing note (never re-embed and re-chunk in the same
-    release) has somewhere concrete to be read before this runs for real."""
-    raise NotImplementedError(
-        "wire a real BulkEmbeddingProvider (see src.llm.embeddings) before running "
-        "this for real; run_backfill()/flip_to_v2() are the entry points."
-    )
-
-
-if __name__ == "__main__":  # pragma: no cover
-    asyncio.run(_cli_main())
+# No `python -m` entry point in this module, deliberately: the operator
+# entry point that actually runs a backfill needs both this module's
+# `run_backfill` and `src.db.tenants.list_tenant_ids`, and wiring the two
+# together belongs in `src/db/backfill_cli.py`, not here — see
+# `run_backfill`'s docstring.
