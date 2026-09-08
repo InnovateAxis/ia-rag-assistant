@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document specifies the complete answer surface for the ia-rag-assistant: how the UI presents retrieved information, how citations attach to claims, how the system communicates confidence, and how refusal works when retrieval returns nothing useful or a wrong tenant's data.
+This document specifies the complete answer surface for the ia-rag-assistant: how the UI presents retrieved information, how citations attach to claims, how the system communicates confidence, and how refusal works when retrieval returns nothing useful or nothing relevant.
 
 The specification covers five states: **streaming**, **answered**, **weak**, **refused**, and **error**. Each state is enumerated with exact UI requirements and copy examples. No open questions remain — the Frontend agent (step 4.5) must construct all five states without interpretation.
 
@@ -20,15 +20,15 @@ These principles apply to all states except error:
 
 ### Inline citations
 - **Attached to the claim, not the paragraph:** Citations `[1] [2]` appear immediately after the specific sentence or phrase they support, not grouped at the end of a paragraph or section.
-- **Claim-level, not document-level:** Multiple claims from one document each cite it by number. The first mention of a document's content is `[1]`; a second claim from the same document later in the answer is also `[1]`. Numbers are assigned in retrieval order (document 1 returned, numbered `[1]`; document 2 returned, numbered `[2]`, etc.) and reused throughout the answer.
+- **Claim-level, not document-level:** Multiple claims from one document each cite it by number. The first mention of a document's content is `[1]`; a second claim from the same document later in the answer is also `[1]`. Numbers are assigned by answer appearance order and reused throughout the answer.
 - **Example structure:** "The surcharge applies to orders over 500 lbs [1] and accrues daily [2]. Invoicing happens on the first of the month [1]."
 
 ### Source panel
 - **Title:** The document's full title as it appears in the source corpus.
 - **Section path:** If the document is structured (markdown headers, sections, or chapters), the path to the specific section cited.
-- **Page number:** If the source is a PDF, the page number where the cited content appears. Leave blank if the source is not paginated (plain text, web page).
+- **Page number:** Leave blank; the corpus is plain text and not paginated. If future versions include PDFs, the page number where the cited content appears.
 - **Click to open:** Clicking the source opens the full document with the cited lines highlighted. If multiple claims cite the same document, opening it shows all cited lines.
-- **Mapping:** Citation number `[1]` in the answer maps to the first source in the panel, `[2]` to the second, etc.
+- **Mapping:** Citation numbers are assigned by answer appearance order. Citation number `[1]` always maps to the first source in the panel (first document cited in the answer), `[2]` to the second, etc.
 
 ### Confidence cue
 - **Present when retrieval is weak:** If the retrieval scored low (details of "weak" score delegated to the orchestrator at step 4.1), the answer must say so explicitly. Phrases like "I found only one loosely related passage" or "The documents I found address a similar question" communicate to the user that the system had to work harder to find anything.
@@ -80,10 +80,7 @@ These principles apply to all states except error:
 │ ┌─ Sources ───────────────────────────────┐           │
 │ │ [1] Rates and Surcharges Policy         │           │
 │ │     → Section: Accessorial Charges      │           │
-│ │     → Page 3                            │           │
 │ │ [2] Billing Schedule                    │           │
-│ │     → No section path                   │           │
-│ │     → Page 1                            │           │
 │ └─────────────────────────────────────────┘           │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -109,7 +106,6 @@ These are examples; the LLM generates the actual text based on what was retrieve
 - **Low similarity scores:** "The documents I found address related topics but may not directly answer your question."
 - **Partial coverage:** "I found information about accessorial charges but not specifically about [the user's specific subquestion]."
 - **Term mismatch:** "The documents use different terminology than your question — they refer to 'handling fees' rather than '[user's term]', so the answer may need translation."
-- **Cross-match risk (without breaching tenant isolation):** "Your question asks about Meridian's rates, but my search also found Acme's rates first — I've tried to distinguish them, but double-check the source." ← This phrasing assures the user that isolation held (they can see which tenant each source belongs to) and explains why the answer might not be clean.
 
 ### Surface layout
 ```
@@ -124,9 +120,7 @@ These are examples; the LLM generates the actual text based on what was retrieve
 │ ┌─ Sources ───────────────────────────────┐           │
 │ │ [1] Rates and Surcharges Policy         │           │
 │ │     → Section: Accessorial Charges      │           │
-│ │     → Page 3                            │           │
 │ │ [2] Billing Schedule                    │           │
-│ │     → Page 1                            │           │
 │ └─────────────────────────────────────────┘           │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -153,10 +147,14 @@ The refusal must **name what was found and why it is insufficient**. A bare "I d
 
 ### Refusal patterns
 
-#### Pattern A: Cross-tenant trap — Search found nothing in the user's tenant
-Copy template: `"I could not find anything about [topic] in [tenant name]'s documents. Your [document type] covers [what it does cover] but does not mention [specific gap]."`
+#### Pattern A: Retrieval returned zero or low-relevance results
+Copy template: `"I could not find anything about [topic] in your documents. Your [document type] covers [what it does cover] but does not mention [specific gap]."`
 
 Example: `"I could not find anything about lithium battery surcharges in your documents. Your hazmat SOP covers general handling procedures but does not mention lithium specifically."`
+
+This pattern applies to questions that retrieve no documents or return documents scoring below the refusal threshold (set at orchestrator step 4.1). Cross-tenant trap questions (e.g., "What is Globex's fuel surcharge?") are also refused at the 4.1 score threshold, per CARRYFORWARD F25: keyword search never returns nothing; it always ranks its best available match. A cross-tenant trap is therefore a low-relevance result, not an empty-retrieval case.
+
+Note: If a question explicitly names another company, you may acknowledge that company name (it appears in the question text itself), but do not assert anything about whether that company exists as a customer or what its documents contain. The user learns isolation held by seeing only their own company's documents in the sources.
 
 Specificity checklist:
 - ✓ Confirms the question was understood ("lithium battery surcharges")
@@ -167,27 +165,21 @@ Specificity checklist:
 - ✗ Does not say "I searched" or "I couldn't find" without context
 - ✗ Does not say "no information" or "nothing available"
 - ✗ Does not dump a list of retrieved documents without relating them to the question
+- ✗ Does not assert or imply that another company's documents exist
 
-#### Pattern B: Search found documents, but in the wrong tenant (caught by RLS)
-Copy template: `"I found information about [topic] in another company's records, but not in [your tenant name]'s. Your documents include [what they include] but not the specific detail you're asking about."`
-
-Example: `"I found information about fuel surcharges in Acme's records, but not in Globex's. Your rate cards include interstate shipping discounts but not fuel adjustment policies."`
-
-Note: This pattern only appears if RLS correctly prevented cross-tenant retrieval and the orchestrator can detect that the question *looks* like it should have an answer. Do not use this pattern if RLS is uncertain. Let the user discover the isolation by seeing that only their own company's documents appear in the sources.
-
-#### Pattern C: Search found documents, but they do not answer the question
+#### Pattern B: Search found documents, but they do not answer the question
 Copy template: `"I found documents about [related topic], but they don't answer your question about [specific question]. The [document type] covers [what it does cover] which is related, but not the same."`
 
-Example: `"I found our detention escalation policies, but they don't answer your question about Meridian Transport's free time allowance. Our policies cover how charges increase over time, which is related, but they specify Acme's free time as 24 hours, not Meridian's."`
+Example: `"I found our detention escalation policies, but they don't answer your question about free time allowance. Our policies cover how charges increase over time, but I cannot find the specific allowance you're asking about."`
 
 Specificity checklist:
 - ✓ Acknowledges what *was* found ("detention escalation policies")
 - ✓ Explains why it's insufficient ("related, but not the same")
-- ✓ Names the gap ("Meridian Transport's free time allowance" vs "Acme's")
+- ✓ Names the gap ("free time allowance" vs what is covered)
 - ✗ Does not say "I don't have that information"
 - ✗ Does not simply list documents without relating them
 
-#### Pattern D: Search found ambiguous or conflicting documents
+#### Pattern C: Search found ambiguous or conflicting documents
 Copy template: `"I found multiple documents that could answer your question about [topic], but they give different answers. [Document A] says [claim 1]; [Document B] says [claim 2]. I cannot tell which applies to your situation."`
 
 Example: `"I found multiple policies about handling equipment claims. Your equipment claim form says submit within 30 days, but the carrier's standard terms say 60 days. I cannot tell which applies to your cargo."`
@@ -234,10 +226,8 @@ Specificity checklist:
 │ allowance for your company.                            │
 │                                                       │
 │ ┌─ What I found ──────────────────────────┐            │
-│ │ Detention Escalation Schedule (Acme)    │            │
-│ │ → Page 2                                │            │
+│ │ Detention Escalation Schedule           │            │
 │ │ Detention FAQ (General)                 │            │
-│ │ → Page 1                                │            │
 │ └─────────────────────────────────────────┘            │
 └───────────────────────────────────────────────────────┘
 ```
@@ -332,15 +322,15 @@ Specificity checklist:
 ## Citations: Mapping and Display
 
 ### Citation number assignment
-- Assigned by **retrieval order**: document 1 returned = `[1]`, document 2 returned = `[2]`, etc.
-- **Not by relevance score:** Document with score 95% is not automatically `[1]` if it was returned second.
-- **Not by document order in the corpus:** Order is retrieval order.
+- Assigned by **answer appearance order**: the first document cited in the answer = `[1]`, the second distinct document cited = `[2]`, etc.
+- **Not by retrieval order:** A later-retrieved document that appears first in the answer gets `[1]`.
+- **Not by document order in the corpus:** Order is determined by where citations appear in the answer text.
 
 ### Citation reuse
 - If the answer cites the same document multiple times (e.g., `[1]` appears twice), the citation number is reused. Do not increment to `[1a]` or `[1b]`.
 
 ### Source panel ordering
-- Sources appear in the panel in the order they were first cited in the answer text (top to bottom), not in retrieval order if the answer reorders claims.
+- Sources appear in the panel in citation order (top to bottom), matching the order they were first cited in the answer text. Citation number `[1]` always maps to the first source in the panel, `[2]` to the second, etc.
 
 ### Cross-document claims
 - If a claim requires information from two documents (e.g., "Document A says X, and Document B says Y, so Z"), cite both: "[1] and [2]" or "[1]; [2]" as appropriate.
