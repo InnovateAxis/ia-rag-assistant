@@ -60,6 +60,15 @@ expected answer text at all** — a real consequence of naive splitting
 (the answer's own substring can itself be cut across a chunk boundary),
 counted as a legitimate miss rather than excluded.
 
+Those 19 cap row 1's maximum achievable hit@5 at 29 of 48 (60.4%), and row
+1 scored 28 of 48 (58.3%) — 28 of the 29 questions it could still possibly
+answer, about 96.6% of what was reachable. Read this way, naive
+fixed-character chunking is not ranking badly on this corpus: it ranks
+nearly perfectly on every question whose answer span survived the split,
+and its low headline score is almost entirely the 19 questions where
+splitting destroyed the answer before retrieval ever ran, not a retrieval
+weakness on top of that.
+
 ## Why rows 2-3 are still identical
 
 **Measured, not assumed: 0 of the corpus's 111 documents produced more than
