@@ -80,3 +80,12 @@ name = "forbid-direct-asyncpg-access"
 type = "forbidden"
 source_modules = ["src.api", "src.auth", "src.chunking", "src.generate", "src.ingest", "src.llm", "src.orchestrate", "src.retrieval", "src.telemetry"]
 forbidden_modules = ["asyncpg"]
+# Without this, "forbidden" checks the whole transitive import graph, so any
+# application module that imports src.db.session (the intended sole gate to
+# the pool, which itself imports asyncpg) would break this contract - the
+# opposite of what "may not import asyncpg directly" (see comment above)
+# means. allow_indirect_imports restricts the check to direct imports only,
+# so an application module going through src.db.session stays permitted and
+# one importing asyncpg itself still fails. Surfaced at step 2.1, the first
+# step that actually calls db.session() from application code.
+allow_indirect_imports = "True"
