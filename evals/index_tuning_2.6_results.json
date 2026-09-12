@@ -1,57 +1,249 @@
 {
   "throughput": {
     "total_chunks": 250000,
-    "elapsed_seconds": 169.4,
-    "chunks_per_second": 1475.8
+    "elapsed_seconds": 155.4,
+    "chunks_per_second": 1609.2
   },
   "seed_counts": {
     "ten_scale_large": 249889,
     "ten_scale_small": 111
   },
+  "cold_start": [
+    {
+      "m": 16,
+      "ef_construction": 64,
+      "ef_search_used": 40,
+      "first_query_ms": 104.3,
+      "plan": {
+        "top_node_type": "Limit",
+        "scan_node_type": "Index Scan",
+        "scan_index_name": "document_chunks_embedding_hnsw_sweep",
+        "plan_uses_hnsw_index": true
+      },
+      "indexes_present": [
+        "document_chunks_content_tsv_idx",
+        "document_chunks_document_id_chunk_index_key",
+        "document_chunks_embedding_hnsw_sweep",
+        "document_chunks_pkey",
+        "document_chunks_tenant_id_document_id_idx"
+      ]
+    },
+    {
+      "m": 32,
+      "ef_construction": 64,
+      "ef_search_used": 60,
+      "first_query_ms": 75.4,
+      "plan": {
+        "top_node_type": "Limit",
+        "scan_node_type": "Index Scan",
+        "scan_index_name": "document_chunks_embedding_hnsw_sweep",
+        "plan_uses_hnsw_index": true
+      },
+      "indexes_present": [
+        "document_chunks_content_tsv_idx",
+        "document_chunks_document_id_chunk_index_key",
+        "document_chunks_embedding_hnsw_sweep",
+        "document_chunks_pkey",
+        "document_chunks_tenant_id_document_id_idx"
+      ]
+    }
+  ],
   "grid": [
     {
       "m": 16,
       "ef_construction": 64,
       "ef_search": 40,
-      "index_build_seconds": 1420.3,
-      "n": 300,
-      "p95_ms": 12.4,
-      "mean_ms": 8.5,
-      "min_ms": 4.7,
-      "max_ms": 63.4
+      "index_build_seconds": 1304.7,
+      "natural": {
+        "n_discarded_warmup": 30,
+        "n": 300,
+        "median_ms": 6.6,
+        "p95_ms": 9.8,
+        "mean_ms": 6.8,
+        "min_ms": 4.3,
+        "max_ms": 12.7,
+        "plan": {
+          "top_node_type": "Limit",
+          "scan_node_type": "Index Scan",
+          "scan_index_name": "document_chunks_embedding_hnsw_sweep",
+          "plan_uses_hnsw_index": true
+        },
+        "indexes_present": [
+          "document_chunks_content_tsv_idx",
+          "document_chunks_document_id_chunk_index_key",
+          "document_chunks_embedding_hnsw_sweep",
+          "document_chunks_pkey",
+          "document_chunks_tenant_id_document_id_idx"
+        ]
+      },
+      "forced": {
+        "n_discarded_warmup": 30,
+        "n": 300,
+        "median_ms": 5.9,
+        "p95_ms": 9.0,
+        "mean_ms": 6.2,
+        "min_ms": 4.0,
+        "max_ms": 14.3,
+        "plan": {
+          "top_node_type": "Limit",
+          "scan_node_type": "Index Scan",
+          "scan_index_name": "document_chunks_embedding_hnsw_sweep",
+          "plan_uses_hnsw_index": true
+        },
+        "indexes_present": [
+          "document_chunks_content_tsv_idx",
+          "document_chunks_document_id_chunk_index_key",
+          "document_chunks_embedding_hnsw_sweep",
+          "document_chunks_pkey"
+        ]
+      }
     },
     {
       "m": 16,
       "ef_construction": 64,
       "ef_search": 60,
-      "index_build_seconds": 1420.3,
-      "n": 300,
-      "p95_ms": 10.2,
-      "mean_ms": 7.8,
-      "min_ms": 5.4,
-      "max_ms": 13.7
+      "index_build_seconds": 1304.7,
+      "natural": {
+        "n_discarded_warmup": 30,
+        "n": 300,
+        "median_ms": 7.3,
+        "p95_ms": 9.9,
+        "mean_ms": 7.5,
+        "min_ms": 5.0,
+        "max_ms": 15.3,
+        "plan": {
+          "top_node_type": "Limit",
+          "scan_node_type": "Index Scan",
+          "scan_index_name": "document_chunks_embedding_hnsw_sweep",
+          "plan_uses_hnsw_index": true
+        },
+        "indexes_present": [
+          "document_chunks_content_tsv_idx",
+          "document_chunks_document_id_chunk_index_key",
+          "document_chunks_embedding_hnsw_sweep",
+          "document_chunks_pkey",
+          "document_chunks_tenant_id_document_id_idx"
+        ]
+      },
+      "forced": {
+        "n_discarded_warmup": 30,
+        "n": 300,
+        "median_ms": 7.0,
+        "p95_ms": 9.2,
+        "mean_ms": 7.3,
+        "min_ms": 5.3,
+        "max_ms": 25.5,
+        "plan": {
+          "top_node_type": "Limit",
+          "scan_node_type": "Index Scan",
+          "scan_index_name": "document_chunks_embedding_hnsw_sweep",
+          "plan_uses_hnsw_index": true
+        },
+        "indexes_present": [
+          "document_chunks_content_tsv_idx",
+          "document_chunks_document_id_chunk_index_key",
+          "document_chunks_embedding_hnsw_sweep",
+          "document_chunks_pkey"
+        ]
+      }
     },
     {
       "m": 16,
       "ef_construction": 64,
       "ef_search": 100,
-      "index_build_seconds": 1420.3,
-      "n": 300,
-      "p95_ms": 15.8,
-      "mean_ms": 11.8,
-      "min_ms": 8.2,
-      "max_ms": 32.0
+      "index_build_seconds": 1304.7,
+      "natural": {
+        "n_discarded_warmup": 30,
+        "n": 300,
+        "median_ms": 10.8,
+        "p95_ms": 15.4,
+        "mean_ms": 11.3,
+        "min_ms": 8.1,
+        "max_ms": 40.4,
+        "plan": {
+          "top_node_type": "Limit",
+          "scan_node_type": "Index Scan",
+          "scan_index_name": "document_chunks_embedding_hnsw_sweep",
+          "plan_uses_hnsw_index": true
+        },
+        "indexes_present": [
+          "document_chunks_content_tsv_idx",
+          "document_chunks_document_id_chunk_index_key",
+          "document_chunks_embedding_hnsw_sweep",
+          "document_chunks_pkey",
+          "document_chunks_tenant_id_document_id_idx"
+        ]
+      },
+      "forced": {
+        "n_discarded_warmup": 30,
+        "n": 300,
+        "median_ms": 11.0,
+        "p95_ms": 14.6,
+        "mean_ms": 11.3,
+        "min_ms": 8.0,
+        "max_ms": 33.2,
+        "plan": {
+          "top_node_type": "Limit",
+          "scan_node_type": "Index Scan",
+          "scan_index_name": "document_chunks_embedding_hnsw_sweep",
+          "plan_uses_hnsw_index": true
+        },
+        "indexes_present": [
+          "document_chunks_content_tsv_idx",
+          "document_chunks_document_id_chunk_index_key",
+          "document_chunks_embedding_hnsw_sweep",
+          "document_chunks_pkey"
+        ]
+      }
     },
     {
       "m": 32,
       "ef_construction": 64,
       "ef_search": 60,
-      "index_build_seconds": 4694.4,
-      "n": 300,
-      "p95_ms": 36.4,
-      "mean_ms": 60.2,
-      "min_ms": 10.4,
-      "max_ms": 8905.4
+      "index_build_seconds": 4649.4,
+      "natural": {
+        "n_discarded_warmup": 30,
+        "n": 300,
+        "median_ms": 15.2,
+        "p95_ms": 25.3,
+        "mean_ms": 16.3,
+        "min_ms": 10.8,
+        "max_ms": 57.0,
+        "plan": {
+          "top_node_type": "Limit",
+          "scan_node_type": "Index Scan",
+          "scan_index_name": "document_chunks_embedding_hnsw_sweep",
+          "plan_uses_hnsw_index": true
+        },
+        "indexes_present": [
+          "document_chunks_content_tsv_idx",
+          "document_chunks_document_id_chunk_index_key",
+          "document_chunks_embedding_hnsw_sweep",
+          "document_chunks_pkey",
+          "document_chunks_tenant_id_document_id_idx"
+        ]
+      },
+      "forced": {
+        "n_discarded_warmup": 30,
+        "n": 300,
+        "median_ms": 13.7,
+        "p95_ms": 18.1,
+        "mean_ms": 14.1,
+        "min_ms": 9.9,
+        "max_ms": 37.0,
+        "plan": {
+          "top_node_type": "Limit",
+          "scan_node_type": "Index Scan",
+          "scan_index_name": "document_chunks_embedding_hnsw_sweep",
+          "plan_uses_hnsw_index": true
+        },
+        "indexes_present": [
+          "document_chunks_content_tsv_idx",
+          "document_chunks_document_id_chunk_index_key",
+          "document_chunks_embedding_hnsw_sweep",
+          "document_chunks_pkey"
+        ]
+      }
     }
   ],
   "f3": [

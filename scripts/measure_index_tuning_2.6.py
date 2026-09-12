@@ -12,9 +12,9 @@ CARRYFORWARD F45/F46 govern what this script can honestly claim:
   discriminate `ef_search` values even with real embeddings at this scale.
   The runbook's own grid (78.1–80.4% hit@5) is an inherited illustration
   from a different corpus and is not restated here as this project's number.
-* **What IS genuinely measured regardless of what the vectors mean:** p95
-  query latency across the `(m, ef_search)` grid, and ingestion throughput.
-  Both are planner/IO effects, not semantic ones.
+* **What IS genuinely measured regardless of what the vectors mean:** query
+  latency across the `(m, ef_search)` grid, and ingestion throughput. Both
+  are planner/IO effects, not semantic ones.
 * **F3 is this step's highest-value output, ahead of the parameter table**
   (CARRYFORWARD F46, explicit): RLS is applied as a post-index filter, so a
   tenant holding a small share of a large table can get zero rows back from
@@ -26,11 +26,24 @@ CARRYFORWARD F45/F46 govern what this script can honestly claim:
   whichever way that comes out (group-14/3.1 and group-15/3.6 need the real
   answer, not the runbook's).
 
+**A latency number is only attributable to `m`/`ef_search` if the plan that
+served it is known** — `hnsw.ef_search` and `m` are HNSW index-scan
+parameters, so if the planner served a query through some other index (or a
+sequential scan), the reported latency measures that plan, not the HNSW
+parameters. Every latency measurement below therefore captures its own
+`EXPLAIN (format json)`, walked to the actual scan node the same way
+`_f3_probe` already does — never assumed from the GUC settings alone — and
+every measurement is taken twice: once under whatever plan the planner
+naturally picks with the full, unmodified index set, and once with the
+planner constrained onto the HNSW index by the same method `_f3_probe` uses.
+
 Does not touch `migrations/0001_chunks.sql` (CARRYFORWARD F46, explicit: its
 HNSW index is declared without `m`/`ef_construction`, and stays that way).
 Every index this script creates and drops lives only inside the ephemeral
 container database it starts — never in a migration, never in a
-long-running database.
+long-running database. Every measurement records which indexes existed on
+`document_chunks` at the moment it was taken (`indexes_present`), rather than
+assuming the natural/forced index sets stayed as intended.
 
 Usage:
     uv run python "scripts/measure_index_tuning_2.6.py"
@@ -85,6 +98,7 @@ GRID = [
 ]
 
 N_LATENCY_SAMPLES = 300
+WARMUP_SAMPLES = 30
 SWEEP_INDEX_NAME = "document_chunks_embedding_hnsw_sweep"
 
 CREATE_DOCUMENTS = """
@@ -94,6 +108,22 @@ create table if not exists documents (
   title     text not null default 'seed document'
 );
 """
+
+
+def _group_grid() -> list[tuple[tuple[int, int], list[int]]]:
+    """GRID, grouped by `(m, ef_construction)` in first-seen order — each
+    group shares one index build. Two groups today (m=16 covers three
+    `ef_search` rows, m=32 covers one); generalises to more without a
+    hardcoded split."""
+    order: list[tuple[int, int]] = []
+    ef_searches: dict[tuple[int, int], list[int]] = {}
+    for m, ef_construction, ef_search in GRID:
+        key = (m, ef_construction)
+        if key not in ef_searches:
+            ef_searches[key] = []
+            order.append(key)
+        ef_searches[key].append(ef_search)
+    return [(key, ef_searches[key]) for key in order]
 
 
 def _rand_vector(rng: random.Random) -> list[float]:
@@ -145,16 +175,26 @@ async def _competing_btree_index(conn: asyncpg.Connection) -> asyncpg.Record | N
     CARRYFORWARD B2 named this possibility directly: "a simple equality RLS
     qual on an indexed column can become an index condition in an ordinary
     btree scan." `enable_seqscan = off` alone forces away from one
-    alternative, not this one. Returned so the caller can drop it for the F3
-    probe specifically and restore it (`indexdef` is the exact DDL to
-    recreate it) before any other measurement in this script runs, since
-    every OTHER row in the parameter table should reflect the real,
+    alternative, not this one. Returned so the caller can drop it for a
+    forced-plan measurement and restore it (`indexdef` is the exact DDL to
+    recreate it) — every natural-plan measurement should reflect the real,
     unmodified index set migrations/0001 would ship.
     """
     return await conn.fetchrow(
         "select indexname, indexdef from pg_indexes where tablename = 'document_chunks' "
         "and indexdef ilike '%btree (tenant_id, document_id)%'"
     )
+
+
+async def _current_indexes(conn: asyncpg.Connection) -> list[str]:
+    """Every index presently on `document_chunks`, so a measurement records
+    what actually existed when it was taken rather than what the caller
+    intended to leave in place."""
+    rows = await conn.fetch(
+        "select indexname from pg_indexes where tablename = 'document_chunks' "
+        "order by indexname"
+    )
+    return [r["indexname"] for r in rows]
 
 
 async def _build_index(conn: asyncpg.Connection, m: int, ef_construction: int) -> float:
@@ -168,43 +208,106 @@ async def _build_index(conn: asyncpg.Connection, m: int, ef_construction: int) -
     return time.perf_counter() - t0
 
 
-async def _p95_latency_ms(
-    conn: asyncpg.Connection, ef_search: int, tenant_id: str, n: int = N_LATENCY_SAMPLES
-) -> dict:
-    """Real query latency against the large tenant, the realistic case: a
-    normal top-5 vector query under this (m, ef_search) index.
+async def _explain_scan(conn: asyncpg.Connection, qv: list[float], k: int = 5) -> dict:
+    """Walk `EXPLAIN (format json)` to the actual scan node. The top-level
+    node of `ORDER BY ... LIMIT` is always "Limit" regardless of what runs
+    underneath it — checking only that node (an earlier version of this
+    script's F3 probe did) always reads "Limit" and never actually confirms
+    which index, if any, ran. Requires both the node type and the index name,
+    so a fallback to an exact Seq Scan + Sort, or to some OTHER index, is
+    visible rather than silently indistinguishable from the intended plan."""
+    plan = await conn.fetch(
+        f"explain (format json) select id from document_chunks "
+        f"order by embedding <=> $1 limit {k}",
+        qv,
+    )
+    plan_json = json.loads(plan[0]["QUERY PLAN"])
+    scan_node = plan_json[0]["Plan"]
+    while "Plans" in scan_node:
+        scan_node = scan_node["Plans"][0]
+    return {
+        "top_node_type": plan_json[0]["Plan"]["Node Type"],
+        "scan_node_type": scan_node["Node Type"],
+        "scan_index_name": scan_node.get("Index Name"),
+        "plan_uses_hnsw_index": scan_node.get("Index Name") == SWEEP_INDEX_NAME,
+    }
 
-    The tenant claim is set once, session-level (`is_local=false`), for the
-    life of this connection rather than per-transaction. That departs from
-    `src/db/session.py`'s per-request `is_local=true` on purpose: this
-    benchmark measures raw HNSW query latency, not the isolation guarantee
-    itself — that guarantee is what `tests/isolation/` tests the real way,
-    with a fresh `is_local=true` claim per transaction on a pooled
-    connection. Reusing one claim here removes transaction-setup overhead
-    from the very number being measured.
-    """
+
+async def _set_session(
+    conn: asyncpg.Connection, tenant_id: str, ef_search: int, *, forced: bool
+) -> None:
     await conn.execute(
         "select set_config('request.jwt.claims', $1, false)",
         f'{{"tenant_id": "{tenant_id}"}}',
     )
+    await conn.execute(f"set enable_seqscan = {'off' if forced else 'on'}")
     await conn.execute(f"set hnsw.ef_search = {ef_search}")
-    rng = random.Random(42)
-    latencies_ms = []
-    for _ in range(n):
+
+
+async def _first_query_latency(
+    conn: asyncpg.Connection, ef_search: int, tenant_id: str, *, seed: int
+) -> dict:
+    """The latency of the first query issued against a freshly built index —
+    reported on its own (see caller), never folded into a mean or median,
+    and with no cause attributed beyond what this function itself
+    establishes: one timestamp, one EXPLAIN, one index listing."""
+    await _set_session(conn, tenant_id, ef_search, forced=False)
+    qv = _rand_vector(random.Random(seed))
+    t0 = time.perf_counter()
+    await conn.fetch("select id from document_chunks order by embedding <=> $1 limit 5", qv)
+    elapsed_ms = (time.perf_counter() - t0) * 1000
+    plan = await _explain_scan(conn, qv)
+    indexes_present = await _current_indexes(conn)
+    return {
+        "first_query_ms": round(elapsed_ms, 1),
+        "plan": plan,
+        "indexes_present": indexes_present,
+    }
+
+
+async def _sample_latencies(
+    conn: asyncpg.Connection,
+    ef_search: int,
+    tenant_id: str,
+    *,
+    forced: bool,
+    seed: int,
+    n_target: int = N_LATENCY_SAMPLES,
+    warmup: int = WARMUP_SAMPLES,
+) -> dict:
+    """`warmup` samples issued and discarded, then `n_target` samples issued
+    and kept, before computing any statistic — median, p95, mean, min, max
+    over the kept set only, plus the plan that actually served these queries
+    and the index set present throughout. `forced` selects `enable_seqscan`;
+    the caller is responsible for the competing btree index's presence or
+    absence (see `_measure_m_group`)."""
+    await _set_session(conn, tenant_id, ef_search, forced=forced)
+    rng = random.Random(seed)
+    kept_ms: list[float] = []
+    for i in range(warmup + n_target):
         qv = _rand_vector(rng)
         t0 = time.perf_counter()
-        await conn.fetch(
-            "select id from document_chunks order by embedding <=> $1 limit 5", qv
-        )
-        latencies_ms.append((time.perf_counter() - t0) * 1000)
-    latencies_ms.sort()
-    p95_idx = min(int(len(latencies_ms) * 0.95), len(latencies_ms) - 1)
+        await conn.fetch("select id from document_chunks order by embedding <=> $1 limit 5", qv)
+        elapsed_ms = (time.perf_counter() - t0) * 1000
+        if i >= warmup:
+            kept_ms.append(elapsed_ms)
+
+    plan = await _explain_scan(conn, _rand_vector(random.Random(seed + 1)))
+    indexes_present = await _current_indexes(conn)
+
+    kept_sorted = sorted(kept_ms)
+    n = len(kept_sorted)
+    p95_idx = min(int(n * 0.95), n - 1)
     return {
+        "n_discarded_warmup": warmup,
         "n": n,
-        "p95_ms": round(latencies_ms[p95_idx], 1),
-        "mean_ms": round(statistics.mean(latencies_ms), 1),
-        "min_ms": round(latencies_ms[0], 1),
-        "max_ms": round(latencies_ms[-1], 1),
+        "median_ms": round(statistics.median(kept_sorted), 1),
+        "p95_ms": round(kept_sorted[p95_idx], 1),
+        "mean_ms": round(statistics.mean(kept_sorted), 1),
+        "min_ms": round(kept_sorted[0], 1),
+        "max_ms": round(kept_sorted[-1], 1),
+        "plan": plan,
+        "indexes_present": indexes_present,
     }
 
 
@@ -228,6 +331,11 @@ async def _f3_probe(conn: asyncpg.Connection, ef_search: int, k: int = 5) -> dic
     one (CARRYFORWARD B2's predicted shape, confirmed). This function
     verifies both, via `scan_node_type`/`scan_index_name` below, rather than
     assuming the GUC setting worked.
+
+    Unchanged since this was independently verified against `b5949c4` — its
+    result stands and is not re-derived by the newer, more general
+    `_sample_latencies`/`_explain_scan` machinery above, to avoid disturbing
+    something already confirmed correct.
     """
     await conn.execute(
         "select set_config('request.jwt.claims', $1, false)",
@@ -273,11 +381,144 @@ def _log(msg: str) -> None:
     print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
 
+async def _measure_m_group(
+    admin_dsn: str, service_dsn: str, m: int, ef_construction: int, ef_searches: list[int]
+) -> tuple[dict, list[dict]]:
+    """Build one (m, ef_construction) index, then for every `ef_search` that
+    shares it: a cold-start sample (index's first query, reported once for
+    the whole group), a natural-plan measurement (full index set), and a
+    forced-plan measurement (competing btree dropped for this group's
+    forced measurements only, restored before returning)."""
+    _log(f"building index m={m} ef_construction={ef_construction} "
+         f"(250k rows, this is the slow step)")
+    build_conn = await asyncpg.connect(admin_dsn)
+    try:
+        build_seconds = await _build_index(build_conn, m, ef_construction)
+    finally:
+        await build_conn.close()
+    _log(f"index built in {build_seconds:.1f}s")
+
+    conn = await asyncpg.connect(service_dsn)
+    ddl_conn = await asyncpg.connect(admin_dsn)
+    try:
+        await register_vector_codec(conn)
+
+        first_ef = ef_searches[0]
+        cold_start = await _first_query_latency(
+            conn, first_ef, LARGE_TENANT, seed=1_000_000 + m
+        )
+        _log(f"  cold start (m={m}, ef_search={first_ef}): "
+             f"{cold_start['first_query_ms']}ms "
+             f"scan={cold_start['plan']['scan_node_type']} "
+             f"index={cold_start['plan']['scan_index_name']}")
+
+        natural: dict[int, dict] = {}
+        for ef_search in ef_searches:
+            _log(f"measuring natural-plan latency: m={m} ef_search={ef_search}")
+            natural[ef_search] = await _sample_latencies(
+                conn, ef_search, LARGE_TENANT, forced=False,
+                seed=2_000_000 + m * 1000 + ef_search,
+            )
+            r = natural[ef_search]
+            _log(f"  -> n={r['n']} median={r['median_ms']}ms p95={r['p95_ms']}ms "
+                 f"scan={r['plan']['scan_node_type']} index={r['plan']['scan_index_name']}")
+
+        competing = await _competing_btree_index(ddl_conn)
+        if competing is not None:
+            _log(f"dropping {competing['indexname']} for forced-plan measurement "
+                 f"(restored after)")
+            await ddl_conn.execute(f'drop index if exists "{competing["indexname"]}"')
+
+        forced: dict[int, dict] = {}
+        for ef_search in ef_searches:
+            _log(f"measuring forced-plan latency: m={m} ef_search={ef_search}")
+            forced[ef_search] = await _sample_latencies(
+                conn, ef_search, LARGE_TENANT, forced=True,
+                seed=3_000_000 + m * 1000 + ef_search,
+            )
+            r = forced[ef_search]
+            _log(f"  -> n={r['n']} median={r['median_ms']}ms p95={r['p95_ms']}ms "
+                 f"scan={r['plan']['scan_node_type']} index={r['plan']['scan_index_name']}")
+
+        if competing is not None:
+            await ddl_conn.execute(competing["indexdef"])
+            _log(f"restored {competing['indexname']}")
+    finally:
+        await conn.close()
+        await ddl_conn.close()
+
+    rows = [
+        {
+            "m": m,
+            "ef_construction": ef_construction,
+            "ef_search": ef_search,
+            "index_build_seconds": round(build_seconds, 1),
+            "natural": natural[ef_search],
+            "forced": forced[ef_search],
+        }
+        for ef_search in ef_searches
+    ]
+    cold_start_result = {
+        "m": m,
+        "ef_construction": ef_construction,
+        "ef_search_used": first_ef,
+        **cold_start,
+    }
+    return cold_start_result, rows
+
+
+async def _run_f3_phase(admin_dsn: str, service_dsn: str) -> list[dict]:
+    """CARRYFORWARD F3, at this step's chosen index config (m=16, ec=64, the
+    runbook's own "<- chosen" row). Caller must run this while that index
+    is still the current sweep index (immediately after that group's
+    `_measure_m_group`, before any other group replaces it).
+
+    "Force the planner onto the vector index" (this step's own instruction)
+    needs more than `enable_seqscan = off`: measured on this project, that
+    alone was not enough, because the planner used migrations/0001's
+    `(tenant_id, document_id)` btree index instead — a cheap equality lookup
+    for a 111-row tenant, and CARRYFORWARD B2's predicted shape. So that
+    index is dropped for this phase only, and restored immediately after
+    (its exact `indexdef`, captured before dropping).
+    """
+    f3_conn = await asyncpg.connect(service_dsn)
+    ddl_conn = await asyncpg.connect(admin_dsn)
+    try:
+        await register_vector_codec(f3_conn)
+        competing = await _competing_btree_index(ddl_conn)
+        if competing is not None:
+            _log(f"F3 phase: dropping {competing['indexname']} "
+                 f"(restored after) so only the HNSW index is available "
+                 f"once enable_seqscan=off")
+            await ddl_conn.execute(f'drop index if exists "{competing["indexname"]}"')
+        # `enable_seqscan = off` is set inside `_f3_probe` itself, on
+        # `f3_conn` — the connection that actually runs the query.
+        # Setting it here on `ddl_conn` would do nothing.
+
+        f3_results = []
+        for ef_search in (40, 60, 100):
+            _log(f"F3 probe: ef_search={ef_search}")
+            f3_result = await _f3_probe(f3_conn, ef_search)
+            f3_results.append(f3_result)
+            _log(f"  -> rows_returned={f3_result['rows_returned']} "
+                 f"scan={f3_result['scan_node_type']} "
+                 f"index={f3_result['scan_index_name']} "
+                 f"used_hnsw={f3_result['plan_uses_hnsw_index']}")
+
+        if competing is not None:
+            await ddl_conn.execute(competing["indexdef"])
+            _log(f"F3 phase: restored {competing['indexname']}")
+    finally:
+        await f3_conn.close()
+        await ddl_conn.close()
+    return f3_results
+
+
 async def run() -> dict:
     # Conservative server memory profile for this ephemeral container —
     # this environment's Docker VM is memory-constrained (observed: an
     # earlier run with default settings was killed for host memory
-    # pressure). None of these affect what is measured: p95 latency and
+    # pressure). None of these affect what is measured: latency and
     # rows-returned are unaffected by shared_buffers/maintenance_work_mem,
     # and disabling fsync/synchronous_commit only affects durability, which
     # a throwaway container torn down at the end of this script does not
@@ -353,122 +594,22 @@ async def run() -> dict:
             newline="\n",
         )
 
-        # Phase 1 — latency grid, with the FULL realistic index set in place
-        # (migrations/0001's `(tenant_id, document_id)` btree included), one
-        # distinct (m, ef_construction) index built per key, ef_search swept
-        # as a session setting across every grid row that shares one.
-        latency_conn = await asyncpg.connect(service_dsn)
-        try:
-            await register_vector_codec(latency_conn)
-            built = {}
-            grid_results = []
-            # Only the m=16 rows here — phase 3 below handles GRID's m=32
-            # row on its own, after phase 2's index-drop/restore is done, so
-            # it is never built twice.
-            for m, ef_construction, ef_search in GRID:
-                if m != 16:
-                    continue
-                key = (m, ef_construction)
-                if key not in built:
-                    _log(f"building index m={m} ef_construction={ef_construction} "
-                         f"(250k rows, this is the slow step)")
-                    build_conn = await asyncpg.connect(admin_dsn)
-                    try:
-                        built[key] = await _build_index(build_conn, m, ef_construction)
-                    finally:
-                        await build_conn.close()
-                    _log(f"index built in {built[key]:.1f}s")
-
-                _log(f"measuring p95 latency: m={m} ef_search={ef_search}")
-                latency = await _p95_latency_ms(latency_conn, ef_search, LARGE_TENANT)
-                grid_results.append(
-                    {
-                        "m": m,
-                        "ef_construction": ef_construction,
-                        "ef_search": ef_search,
-                        "index_build_seconds": round(built[key], 1),
-                        **latency,
-                    }
-                )
-                _log(f"  -> p95={latency['p95_ms']}ms mean={latency['mean_ms']}ms")
-        finally:
-            await latency_conn.close()
-
-        # Phase 2 — F3, at this step's chosen index config (m=16, ec=64,
-        # the runbook's own "<- chosen" row), which is still the current
-        # sweep index at this point (GRID orders m=16 before m=32).
-        #
-        # "Force the planner onto the vector index" (this step's own
-        # instruction) needs more than `enable_seqscan = off`: measured on
-        # this project, that alone was not enough, because the planner used
-        # migrations/0001's `(tenant_id, document_id)` btree index instead —
-        # a cheap equality lookup for a 111-row tenant, and CARRYFORWARD B2's
-        # predicted shape. So that index is dropped for this phase only, and
-        # restored immediately after (its exact `indexdef`, captured before
-        # dropping) — every other row in the parameter table above and the
-        # m=32 row below reflects the real, unmodified index set.
-        f3_conn = await asyncpg.connect(service_dsn)
-        ddl_conn = await asyncpg.connect(admin_dsn)
-        try:
-            await register_vector_codec(f3_conn)
-            competing = await _competing_btree_index(ddl_conn)
-            if competing is not None:
-                _log(f"F3 phase: dropping {competing['indexname']} "
-                     f"(restored after) so only the HNSW index is available "
-                     f"once enable_seqscan=off")
-                await ddl_conn.execute(f'drop index if exists "{competing["indexname"]}"')
-            # `enable_seqscan = off` is set inside `_f3_probe` itself, on
-            # `f3_conn` — the connection that actually runs the query.
-            # Setting it here on `ddl_conn` would do nothing.
-
-            f3_results = []
-            for ef_search in (40, 60, 100):
-                _log(f"F3 probe: ef_search={ef_search}")
-                f3_result = await _f3_probe(f3_conn, ef_search)
-                f3_results.append(f3_result)
-                _log(f"  -> rows_returned={f3_result['rows_returned']} "
-                     f"scan={f3_result['scan_node_type']} "
-                     f"index={f3_result['scan_index_name']} "
-                     f"used_hnsw={f3_result['plan_uses_hnsw_index']}")
-
-            if competing is not None:
-                await ddl_conn.execute(competing["indexdef"])
-                _log(f"F3 phase: restored {competing['indexname']}")
-        finally:
-            await f3_conn.close()
-            await ddl_conn.close()
-
-        # Phase 3 — the m=32 row, same realistic index set as phase 1
-        # (the competing btree index above is restored by the time this
-        # runs, since GRID's only m=32 row comes after every m=16 row).
-        m, ef_construction, ef_search = GRID[-1]
-        assert m == 32, GRID  # phase 2 assumed m=16 was still current; guard it
-        latency_conn = await asyncpg.connect(service_dsn)
-        try:
-            await register_vector_codec(latency_conn)
-            _log(f"building index m={m} ef_construction={ef_construction} "
-                 f"(250k rows, this is the slow step)")
-            build_conn = await asyncpg.connect(admin_dsn)
-            try:
-                build_seconds = await _build_index(build_conn, m, ef_construction)
-            finally:
-                await build_conn.close()
-            _log(f"index built in {build_seconds:.1f}s")
-
-            _log(f"measuring p95 latency: m={m} ef_search={ef_search}")
-            latency = await _p95_latency_ms(latency_conn, ef_search, LARGE_TENANT)
-            grid_results.append(
-                {
-                    "m": m,
-                    "ef_construction": ef_construction,
-                    "ef_search": ef_search,
-                    "index_build_seconds": round(build_seconds, 1),
-                    **latency,
-                }
+        # One (m, ef_construction) group at a time: build its index, measure
+        # every ef_search that shares it (cold start, natural plan, forced
+        # plan), then — for the m=16 group specifically, immediately after,
+        # while its index is still current — run F3 at this step's chosen
+        # configuration.
+        grid_results: list[dict] = []
+        cold_start_results: list[dict] = []
+        f3_results: list[dict] = []
+        for (m, ef_construction), ef_searches in _group_grid():
+            cold, rows = await _measure_m_group(
+                admin_dsn, service_dsn, m, ef_construction, ef_searches
             )
-            _log(f"  -> p95={latency['p95_ms']}ms mean={latency['mean_ms']}ms")
-        finally:
-            await latency_conn.close()
+            cold_start_results.append(cold)
+            grid_results.extend(rows)
+            if m == 16:
+                f3_results = await _run_f3_phase(admin_dsn, service_dsn)
 
         return {
             "throughput": {
@@ -477,15 +618,21 @@ async def run() -> dict:
                 "chunks_per_second": round(throughput.chunks_per_second, 1),
             },
             "seed_counts": counts,
+            "cold_start": cold_start_results,
             "grid": grid_results,
             "f3": f3_results,
         }
+
+
+def _fmt_plan(plan: dict) -> str:
+    return f"{plan['scan_node_type']} / {plan['scan_index_name'] or '(none)'}"
 
 
 def _render_markdown(results: dict) -> str:
     grid = results["grid"]
     f3 = results["f3"]
     thr = results["throughput"]
+    cold_start = results["cold_start"]
 
     lines = [
         "# Step 2.6 — index tuning and ingestion throughput, measured on this project",
@@ -508,6 +655,26 @@ def _render_markdown(results: dict) -> str:
             f"split seed would hide the effect below."
         ),
         "",
+        "## Cold start",
+        "",
+        (
+            "The latency of the first query issued against each freshly built "
+            "index, reported on its own — never folded into any mean or median "
+            "below, and no cause attributed beyond what is shown here:"
+        ),
+        "",
+        "| m | ef_construction | ef_search | first query (ms) | plan (scan / index) | indexes present |",
+        "|---|---|---|---|---|---|",
+    ]
+    for c in cold_start:
+        lines.append(
+            f"| {c['m']} | {c['ef_construction']} | {c['ef_search_used']} | "
+            f"{c['first_query_ms']} | {_fmt_plan(c['plan'])} | "
+            f"{', '.join(c['indexes_present'])} |"
+        )
+
+    lines += [
+        "",
         "## Parameter table",
         "",
         (
@@ -517,21 +684,57 @@ def _render_markdown(results: dict) -> str:
             "vectors carry no semantics; (2) 2.2 already measured `hit@5` at 100% "
             "on the real 111-document corpus (`evals/chunking_impact_2.2.md`), so "
             "the metric is saturated and cannot discriminate `ef_search` values "
-            "regardless. p95 latency and ingestion throughput are genuine "
-            "measurements, taken on this run, at this scale."
+            "regardless."
         ),
         "",
-        "| m | ef_search | ef_construction | hit@5 | p95 (ms) | mean (ms) | index build (s) |",
-        "|---|---|---|---|---|---|---|",
+        (
+            "Every row below is measured twice, because a latency number is only "
+            "attributable to `m`/`ef_search` if the plan that served it is known: "
+            "**natural** is whatever plan the planner picks with the full, "
+            "unmodified index set (nothing forced); **forced** constrains the "
+            "planner onto the HNSW index by the same method `_f3_probe` uses "
+            "(`enable_seqscan = off` plus dropping the competing "
+            "`(tenant_id, document_id)` btree index for the duration of the "
+            "forced measurements only, restored immediately after). Both report "
+            "the plan and the index set actually present, rather than assuming "
+            "either. `n` is the sample count kept AFTER discarding the first "
+            f"{WARMUP_SAMPLES} samples of that configuration as warm-up."
+        ),
+        "",
+        (
+            "### Natural plan (full index set, nothing forced)"
+        ),
+        "",
+        "| m | ef_search | ef_construction | hit@5 | plan (scan / index) | n | median (ms) | p95 (ms) | mean (ms) | min (ms) | max (ms) | index build (s) | indexes present |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for row in grid:
+        n_ = row["natural"]
         lines.append(
             f"| {row['m']} | {row['ef_search']} | {row['ef_construction']} | "
-            f"not measurable on synthetic vectors — see note above | "
-            f"{row['p95_ms']} | {row['mean_ms']} | {row['index_build_seconds']} |"
+            f"not measurable — see note above | {_fmt_plan(n_['plan'])} | "
+            f"{n_['n']} | {n_['median_ms']} | {n_['p95_ms']} | {n_['mean_ms']} | "
+            f"{n_['min_ms']} | {n_['max_ms']} | {row['index_build_seconds']} | "
+            f"{', '.join(n_['indexes_present'])} |"
         )
 
-    outlier_rows = [r for r in grid if r["mean_ms"] > r["p95_ms"]]
+    lines += [
+        "",
+        "### Forced onto the HNSW index",
+        "",
+        "| m | ef_search | ef_construction | hit@5 | plan (scan / index) | n | median (ms) | p95 (ms) | mean (ms) | min (ms) | max (ms) | indexes present |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|",
+    ]
+    for row in grid:
+        f_ = row["forced"]
+        lines.append(
+            f"| {row['m']} | {row['ef_search']} | {row['ef_construction']} | "
+            f"not measurable — see note above | {_fmt_plan(f_['plan'])} | "
+            f"{f_['n']} | {f_['median_ms']} | {f_['p95_ms']} | {f_['mean_ms']} | "
+            f"{f_['min_ms']} | {f_['max_ms']} | "
+            f"{', '.join(f_['indexes_present'])} |"
+        )
+
     lines += [
         "",
         (
@@ -540,21 +743,42 @@ def _render_markdown(results: dict) -> str:
             "here as measured.**"
         ),
     ]
-    if outlier_rows:
+
+    # Mean-vs-p95: report what the data shows, not a proposed cause.
+    outlier_lines = []
+    for row in grid:
+        for label in ("natural", "forced"):
+            r = row[label]
+            if r["mean_ms"] > r["p95_ms"]:
+                outlier_lines.append(
+                    f"m={row['m']} ef_search={row['ef_search']} ({label}): "
+                    f"mean {r['mean_ms']}ms > p95 {r['p95_ms']}ms "
+                    f"(n={r['n']}, min={r['min_ms']}ms, max={r['max_ms']}ms)"
+                )
+    if outlier_lines:
+        lines += [
+            "",
+            "**Mean above p95, observed on:**",
+            "",
+        ] + [f"- {line}" for line in outlier_lines] + [
+            "",
+            (
+                "By construction, p95 excludes the slowest samples in the kept "
+                "set; a mean above it means at least one kept sample is far "
+                "enough above the rest to pull the mean past that threshold. "
+                "The per-row `min_ms`/`max_ms` above bound how large. This "
+                "script does not establish a cause for it."
+            ),
+        ]
+    else:
         lines += [
             "",
             (
-                "**Mean above p95 on "
-                + ", ".join(f"the m={r['m']} ef_search={r['ef_search']} row" for r in outlier_rows)
-                + "** — a real measured artifact, not an error: `min_ms`/`max_ms` "
-                "in the raw JSON show a single large outlier per flagged row "
-                "(e.g. one query far slower than the other 299 — plausible on a "
-                "memory-constrained host under this container's concurrent "
-                "index-build load) pulling the mean above the 95th percentile, "
-                "which by construction excludes that one slowest sample. "
-                "Reported as measured rather than smoothed away."
+                "No row's mean exceeded its p95 this run — see the raw JSON for "
+                "the full min/max range of every row."
             ),
         ]
+
     lines += [
         "",
         "## Ingestion throughput",
@@ -585,12 +809,11 @@ def _render_markdown(results: dict) -> str:
             f"migrations/0001's `(tenant_id, document_id)` btree index instead "
             f"(CARRYFORWARD B2's predicted shape), an equality lookup that is "
             f"cheap for a 111-row tenant regardless of the vector index. That "
-            f"btree index was dropped for this probe only — after the m=16 "
-            f"latency rows above (measured with the full, realistic index set) "
-            f"and restored before the m=32 row below — so the HNSW index was "
-            f"the only one available. One "
-            f"`order by embedding <=> $1 limit 5` query per `ef_search` value "
-            f"below, same tenant and query vector throughout so only "
+            f"btree index was dropped for this probe only and restored "
+            f"immediately after — the parameter table above measures this same "
+            f"drop/restore independently, per row, as its own \"forced\" column "
+            f"set. One `order by embedding <=> $1 limit 5` query per `ef_search` "
+            f"value below, same tenant and query vector throughout so only "
             f"`ef_search` varies; `plan_uses_hnsw_index` (raw results) confirms "
             f"the HNSW index actually ran each time rather than assuming the "
             f"GUC setting worked:"
